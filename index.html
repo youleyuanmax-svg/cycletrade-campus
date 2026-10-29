@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CycleTrade Campus · 校园二手单车交易平台</title>
+<meta name="description" content="CycleTrade Campus — 带官方验车报告、车架号核验与第三方担保交易的校园二手单车平台。CDT504 课程演示原型。">
+<!-- 说明：本原型唯一外部依赖为 Tailwind CSS CDN；车辆图片全部为内联 SVG，断网也不会裂图。 -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: { 950:'#080F1C', 900:'#0F172A', 800:'#1E293B', 700:'#334155' },
+          brand: { 50:'#EFF4FF', 100:'#DBE6FF', 200:'#BFD3FF', 400:'#60A5FA', 500:'#2563EB', 600:'#1D4ED8', 700:'#1E40AF' },
+          mint: { 50:'#ECFDF5', 100:'#D1FAE5', 200:'#A7F3D0', 300:'#6EE7B7', 400:'#34D399', 500:'#10B981', 600:'#059669', 700:'#047857' }
+        },
+        fontFamily: {
+          sans: ['-apple-system','BlinkMacSystemFont','PingFang SC','Hiragino Sans GB','Helvetica Neue','Microsoft YaHei','sans-serif']
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(15,23,42,.04), 0 14px 34px -20px rgba(15,23,42,.28)',
+          lift: '0 24px 48px -24px rgba(15,23,42,.42)',
+          glow: '0 0 0 1px rgba(37,99,235,.18), 0 22px 60px -24px rgba(37,99,235,.65)',
+          ring: '0 0 0 4px rgba(37,99,235,.12)'
+        }
+      }
+    }
+  };
+</script>
+<style>
+  :root { --ink:#0F172A; --brand:#2563EB; --mint:#10B981; }
+  html { scroll-behavior: smooth; }
+  body { background:#F6F8FB; color:#0F172A; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  ::selection { background:#BFDBFE; color:#0F172A; }
+
+  .hero-grid{
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.055) 1px, transparent 1px);
+    background-size: 58px 58px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 45% 10%, #000 20%, transparent 78%);
+            mask-image: radial-gradient(ellipse 80% 70% at 45% 10%, #000 20%, transparent 78%);
+  }
+  .noise::after{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.35;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+  }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:.75rem; font-weight:600; transition:all .18s ease; cursor:pointer; white-space:nowrap; }
+  .btn:active{ transform:scale(.975); }
+  .btn:focus-visible{ outline:none; box-shadow:0 0 0 4px rgba(37,99,235,.25); }
+  .btn-primary{ background:#2563EB; color:#fff; box-shadow:0 12px 26px -14px rgba(37,99,235,.9); }
+  .btn-primary:hover{ background:#1D4ED8; }
+  .btn-mint{ background:#10B981; color:#04281C; box-shadow:0 12px 26px -14px rgba(16,185,129,.9); }
+  .btn-mint:hover{ background:#34D399; }
+  .btn-ghost{ background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(255,255,255,.14); }
+  .btn-ghost:hover{ background:rgba(255,255,255,.13); }
+  .btn-outline{ background:#fff; color:#0F172A; border:1px solid #E2E8F0; }
+  .btn-outline:hover{ background:#F8FAFC; border-color:#CBD5E1; }
+  .btn-dark{ background:#0F172A; color:#fff; }
+  .btn-dark:hover{ background:#1E293B; }
+  .btn[disabled]{ opacity:.45; cursor:not-allowed; }
+
+  .nav-link{ color:#94A3B8; font-size:13.5px; padding:.5rem .75rem; border-radius:.6rem; transition:.18s; }
+  .nav-link:hover{ color:#E2E8F0; background:rgba(255,255,255,.06); }
+  .nav-link.active{ color:#fff; background:rgba(255,255,255,.10); }
+
+  .chip{ display:inline-flex; align-items:center; gap:.3rem; font-size:11px; font-weight:600; padding:.2rem .55rem; border-radius:999px; }
+  .chip-dark{ background:rgba(255,255,255,.08); color:#CBD5E1; border:1px solid rgba(255,255,255,.08); }
+  .chip-mint{ background:#ECFDF5; color:#047857; border:1px solid #A7F3D0; }
+  .chip-blue{ background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; }
+  .chip-amber{ background:#FFFBEB; color:#B45309; border:1px solid #FDE68A; }
+  .chip-slate{ background:#F1F5F9; color:#475569; border:1px solid #E2E8F0; }
+
+  .cat-chip{ font-size:11.5px; color:#94A3B8; padding:.28rem .65rem; border-radius:999px; border:1px solid transparent; transition:.18s; white-space:nowrap; }
+  .cat-chip:hover{ color:#fff; background:rgba(255,255,255,.07); }
+  .cat-chip.is-active{ color:#0F172A; background:#fff; font-weight:600; }
+
+  .type-chip{ font-size:12px; color:#475569; padding:.4rem .8rem; border-radius:999px; border:1px solid #E2E8F0; background:#fff; transition:.18s; }
+  .type-chip:hover{ border-color:#CBD5E1; color:#0F172A; }
+  .type-chip.is-active{ background:#0F172A; color:#fff; border-color:#0F172A; }
+
+  .seg-btn{ font-size:11.5px; padding:.38rem .75rem; border-radius:.55rem; color:#64748B; transition:.18s; }
+  .seg-btn:hover{ color:#0F172A; }
+  .seg-btn.is-active{ background:#fff; color:#0F172A; font-weight:600; box-shadow:0 1px 3px rgba(15,23,42,.12); }
+
+  .field{ width:100%; min-width:0; height:2.75rem; border-radius:.75rem; border:1px solid #E2E8F0; background:#fff; padding:0 .8rem; font-size:13.5px; color:#0F172A; transition:.18s; }
+  .field:focus{ outline:none; border-color:#2563EB; box-shadow:0 0 0 4px rgba(37,99,235,.10); }
+  .field-error{ border-color:#EF4444 !important; box-shadow:0 0 0 4px rgba(239,68,68,.08) !important; }
+  textarea.field{ height:auto; padding:.7rem .8rem; resize:vertical; }
+  label.lbl{ display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:.4rem; }
+  .req{ color:#EF4444; }
+
+  .bike-card{ transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+  .bike-card:hover{ transform:translateY(-4px); box-shadow:0 26px 50px -26px rgba(15,23,42,.38); border-color:#CBD5E1; }
+  .bike-card:hover .bike-art{ transform:translateY(-3px) scale(1.02); }
+  .bike-art{ transition:transform .4s cubic-bezier(.2,.8,.2,1); }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
+  .reveal.in{ opacity:1; transform:none; }
+
+  .modal{ position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:1rem; }
+  .modal .modal-backdrop{ position:absolute; inset:0; background:rgba(8,15,28,.62); backdrop-filter:blur(6px); opacity:0; transition:opacity .22s ease; }
+  .modal .modal-panel{ position:relative; opacity:0; transform:translateY(14px) scale(.985); transition:opacity .24s ease, transform .24s cubic-bezier(.2,.8,.2,1); }
+  .modal.is-open .modal-backdrop{ opacity:1; }
+  .modal.is-open .modal-panel{ opacity:1; transform:none; }
+
+  .stepper-line{ height:2px; background:#E2E8F0; flex:1; }
+  .timeline-dot{ box-shadow:0 0 0 6px #F6F8FB; }
+
+  .hide-scrollbar::-webkit-scrollbar{ display:none; }
+  .hide-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+
+  .thin-scroll::-webkit-scrollbar{ width:8px; height:8px; }
+  .thin-scroll::-webkit-scrollbar-thumb{ background:#CBD5E1; border-radius:8px; }
+  .thin-scroll::-webkit-scrollbar-track{ background:transparent; }
+
+  .toast{ animation:toastIn .3s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes toastIn{ from{ opacity:0; transform:translateY(14px) scale(.97);} to{ opacity:1; transform:none; } }
+  .toast.out{ animation:toastOut .25s ease forwards; }
+  @keyframes toastOut{ to{ opacity:0; transform:translateY(8px) scale(.98); } }
+
+  .pulse-dot{ position:relative; }
+  .pulse-dot::after{ content:''; position:absolute; inset:-4px; border-radius:999px; background:currentColor; opacity:.25; animation:pulse 2s infinite; }
+  @keyframes pulse{ 0%{transform:scale(.8);opacity:.35} 70%{transform:scale(1.8);opacity:0} 100%{opacity:0} }
+
+  .qr-glow{ filter:drop-shadow(0 18px 30px rgba(15,23,42,.18)); }
+
+  @media print{
+    header, .no-print{ display:none !important; }
+    body{ background:#fff; }
+  }
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+<!-- ================= HEADER ================= -->
+<header class="sticky top-0 z-40 no-print">
+  <div class="bg-ink-900/95 backdrop-blur-xl border-b border-white/[0.07]">
+    <div class="mx-auto max-w-[1280px] px-4 sm:px-5 h-[68px] flex items-center gap-3 sm:gap-4">
+      <a href="#/home" class="flex items-center gap-2.5 shrink-0 group">
+        <span class="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-500 to-mint-500 grid place-items-center shadow-glow group-hover:scale-105 transition">
+          <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-white" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M5.5 17.5 9 8h5l4 9.5"/><path d="M9 8h6"/><path d="M13 8l2 5"/>
+          </svg>
+        </span>
+        <span class="leading-tight">
+          <span class="block text-white font-semibold tracking-tight text-[15px]">CycleTrade <span class="text-mint-400">Campus</span></span>
+          <span class="block text-[9.5px] text-slate-500 tracking-[0.2em] font-medium">VERIFIED P2P BIKES</span>
+        </span>
+      </a>
+
+      <div class="hidden lg:flex flex-1 max-w-[340px] relative ml-2">
+        <svg viewBox="0 0 24 24" fill="none" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        <input id="globalSearch" type="search" placeholder="搜索车型、品牌或校区…" autocomplete="off"
+          class="w-full h-10 rounded-xl bg-white/[0.07] border border-white/10 pl-9 pr-3 text-[13px] text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-400/60 focus:bg-white/[0.1] transition">
+      </div>
+
+      <nav class="hidden md:flex items-center gap-0.5 ml-1">
+        <button class="nav-link" data-nav="home">找车</button>
+        <button class="nav-link" data-nav="flow">服务流程</button>
+        <button class="nav-link" data-nav="orders">我的订单</button>
+        <button class="nav-link" data-nav="admin">后台审核</button>
+      </nav>
+
+      <div class="ml-auto flex items-center gap-2">
+        <button onclick="openPublish()" class="btn btn-primary h-9 px-3.5 text-[12.5px]">
+          <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span class="hidden sm:inline">发布闲置</span>
+        </button>
+        <button onclick="go('orders')" class="btn btn-ghost h-9 px-3 text-[12.5px] hidden sm:inline-flex">
+          <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l1.5 4.5H4.5L6 3Z"/><path d="M4.5 7.5V21h15V7.5"/><path d="M9.5 11.5a2.5 2.5 0 0 0 5 0"/></svg>
+          我的订单
+        </button>
+        <button onclick="go('admin')" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 grid place-items-center text-[11px] font-bold text-white hover:bg-white/20 transition" title="演示账号 · 管理员">YC</button>
+      </div>
+    </div>
+
+    <div class="border-t border-white/[0.05]">
+      <div class="mx-auto max-w-[1280px] px-4 sm:px-5 h-11 flex items-center gap-2 overflow-x-auto hide-scrollbar">
+        <span class="text-[10.5px] font-semibold tracking-wider text-slate-500 shrink-0">热门分类</span>
+        <button class="cat-chip" data-type="mountain">山路车</button>
+        <button class="cat-chip" data-type="road">公路车</button>
+        <button class="cat-chip" data-type="folding">代步折叠车</button>
+        <button class="cat-chip" data-type="student">学生专区</button>
+        <span class="ml-auto hidden xl:flex items-center gap-1.5 text-[11px] text-slate-500 shrink-0">
+          <span class="h-1.5 w-1.5 rounded-full bg-mint-400 pulse-dot text-mint-400"></span>
+          今日新增 12 辆已核验车辆
+        </span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="flex-1">
+<!-- ================= HOME ================= -->
+<section id="view-home" data-view="home">
+  <div class="relative overflow-hidden bg-ink-900 text-white noise">
+    <div class="absolute inset-0 hero-grid"></div>
+    <div class="absolute -top-40 -right-20 h-[560px] w-[560px] rounded-full bg-brand-600/25 blur-[130px]"></div>
+    <div class="absolute top-40 -left-32 h-[420px] w-[420px] rounded-full bg-mint-500/10 blur-[110px]"></div>
+
+    <div class="relative mx-auto max-w-[1280px] px-5 pt-12 pb-28 lg:pt-16 lg:pb-32">
+      <div class="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <div class="lg:col-span-7">
+          <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] text-slate-300 backdrop-blur">
+            <span class="h-1.5 w-1.5 rounded-full bg-mint-400 pulse-dot text-mint-400"></span>
+            CDT504 · 产品-服务一体化系统 · 交互原型
+          </div>
+          <h1 class="mt-5 text-[38px] leading-[1.08] sm:text-[50px] lg:text-[54px] font-bold tracking-tight">
+            校园二手单车<br>
+            <span class="bg-gradient-to-r from-mint-300 via-mint-400 to-brand-400 bg-clip-text text-transparent">100% 车架号核验</span><br class="hidden sm:block">
+            与官方验车保障
+          </h1>
+          <p class="mt-5 max-w-[540px] text-[14.5px] leading-7 text-slate-400">
+            面向香港高校学生与教职工的垂直二手单车平台。每一辆车都有溯源码与第三方验车报告，
+            资金由平台担保托管，线下合作车行交付，让「毕业转手」和「低成本通勤」都变得可信。
+          </p>
+
+          <div class="mt-7 flex flex-wrap items-center gap-3">
+            <button onclick="go('bikes')" class="btn btn-primary h-12 px-6 text-sm">
+              浏览在售车辆
+              <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+            <button onclick="openPublish(2)" class="btn btn-ghost h-12 px-5 text-sm">
+              <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-mint-400" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V7l7-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+              预约免费验车
+            </button>
+            <div class="flex items-center gap-2 pl-1 text-[11.5px] text-slate-500">
+              <div class="flex -space-x-2">
+                <span class="h-6 w-6 rounded-full bg-brand-500 border-2 border-ink-900 grid place-items-center text-[8px] font-bold">YC</span>
+                <span class="h-6 w-6 rounded-full bg-mint-500 border-2 border-ink-900 grid place-items-center text-[8px] font-bold text-ink-900">KT</span>
+                <span class="h-6 w-6 rounded-full bg-slate-600 border-2 border-ink-900 grid place-items-center text-[8px] font-bold">LS</span>
+              </div>
+              1,284 位同学正在使用
+            </div>
+          </div>
+
+          <div class="mt-9 grid grid-cols-3 gap-4 border-t border-white/[0.07] pt-6 max-w-[560px]">
+            <div>
+              <p class="text-2xl font-bold tracking-tight">128<span class="text-sm text-slate-500 ml-1">辆</span></p>
+              <p class="mt-1 text-[11px] text-slate-500">在售已核验车辆</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold tracking-tight text-mint-400">98.6<span class="text-sm text-slate-500 ml-0.5">%</span></p>
+              <p class="mt-1 text-[11px] text-slate-500">官方验车通过率</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold tracking-tight">3.2<span class="text-sm text-slate-500 ml-1">天</span></p>
+              <p class="mt-1 text-[11px] text-slate-500">平均成交周期</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 relative hidden sm:block">
+          <div class="absolute -inset-6 rounded-[32px] bg-gradient-to-br from-brand-500/20 to-mint-500/10 blur-2xl"></div>
+          <div class="relative rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-xl p-5 shadow-2xl">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="h-7 w-7 rounded-lg bg-mint-500/15 grid place-items-center">
+                  <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-mint-400" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V7l7-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+                </span>
+                <span class="text-[12px] text-slate-300">官方 P2P 验车报告</span>
+              </div>
+              <span class="chip bg-mint-500/15 text-mint-300 border border-mint-500/20">VERIFIED</span>
+            </div>
+
+            <div class="mt-5 flex items-center gap-4">
+              <div class="relative h-[76px] w-[76px] shrink-0">
+                <svg viewBox="0 0 80 80" class="h-full w-full -rotate-90">
+                  <circle cx="40" cy="40" r="33" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="6"/>
+                  <circle cx="40" cy="40" r="33" fill="none" stroke="#10B981" stroke-width="6" stroke-linecap="round" stroke-dasharray="176 207"/>
+                </svg>
+                <div class="absolute inset-0 grid place-items-center">
+                  <div class="text-center">
+                    <p class="text-[19px] font-bold leading-none">8.5</p>
+                    <p class="text-[9px] text-slate-500 mt-0.5">/ 10</p>
+                  </div>
+                </div>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[14px] font-semibold">Giant Escape 3 · 平把公路</p>
+                <p class="mt-1 text-[11px] text-slate-400">车架号 HK-****-4821 · 岭南大学</p>
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  <span class="chip chip-dark">12 项检测通过</span>
+                  <span class="chip chip-dark">刹车 9.0</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-5 space-y-2.5">
+              <div class="flex items-center gap-3">
+                <span class="w-14 text-[10.5px] text-slate-400">刹车系统</span>
+                <div class="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full rounded-full bg-mint-400" style="width:90%"></div></div>
+                <span class="w-7 text-right text-[10.5px] text-mint-300 font-semibold">9.0</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="w-14 text-[10.5px] text-slate-400">车架结构</span>
+                <div class="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full rounded-full bg-mint-400" style="width:92%"></div></div>
+                <span class="w-7 text-right text-[10.5px] text-mint-300 font-semibold">9.2</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="w-14 text-[10.5px] text-slate-400">传动变速</span>
+                <div class="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full rounded-full bg-mint-400" style="width:85%"></div></div>
+                <span class="w-7 text-right text-[10.5px] text-mint-300 font-semibold">8.5</span>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between border-t border-white/10 pt-3.5">
+              <div class="flex items-center gap-2">
+                <span class="h-7 w-7 rounded-full bg-white/10 grid place-items-center text-[9px] font-bold">KT</span>
+                <div>
+                  <p class="text-[10.5px] text-slate-200">Ken Tso · 认证验车师 #V-0231</p>
+                  <p class="text-[9.5px] text-slate-500">2026-10-24 · 岭南大学合作车行</p>
+                </div>
+              </div>
+              <svg viewBox="0 0 64 28" class="h-7 w-16 text-mint-400/90" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 20c6-1 7-11 12-10s3 9 8 8 5-12 10-10 3 9 8 7 5-9 10-7 4 6 6 5"/></svg>
+            </div>
+          </div>
+
+          <div class="absolute -left-5 -top-4 hidden xl:flex items-center gap-1.5 rounded-full border border-white/10 bg-ink-800/90 px-3 py-1.5 text-[10.5px] text-slate-200 shadow-xl backdrop-blur">
+            <span class="h-1.5 w-1.5 rounded-full bg-mint-400"></span>车架号已核验
+          </div>
+          <div class="absolute -right-4 -bottom-4 hidden xl:flex items-center gap-1.5 rounded-full border border-white/10 bg-ink-800/90 px-3 py-1.5 text-[10.5px] text-slate-200 shadow-xl backdrop-blur">
+            <svg viewBox="0 0 24 24" fill="none" class="h-3.5 w-3.5 text-brand-400" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>担保交易托管
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-[1280px] px-5 relative z-10 -mt-20">
+    <div class="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-lift">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <p class="text-[12px] font-semibold text-ink-900 flex items-center gap-2">
+          <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-brand-500" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          快速筛选
+        </p>
+        <button onclick="resetFilters()" class="text-[11px] text-slate-400 hover:text-brand-600 transition">重置全部</button>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-2.5 [&>div]:min-w-0">
+        <div>
+          <label class="lbl">价格区间</label>
+          <select class="field" data-filter="price">
+            <option value="all">不限价格</option>
+            <option value="0-1000">HK$ 1,000 以下</option>
+            <option value="1000-2000">HK$ 1,000 – 2,000</option>
+            <option value="2000-4000">HK$ 2,000 – 4,000</option>
+            <option value="4000+">HK$ 4,000 以上</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">校区</label>
+          <select class="field" data-filter="campus">
+            <option value="all">全部校区</option>
+            <option value="Lingnan">Lingnan 岭南大学</option>
+            <option value="HKU">HKU 香港大学</option>
+            <option value="CUHK">CUHK 中文大学</option>
+            <option value="PolyU">PolyU 理工大学</option>
+            <option value="CityU">CityU 城市大学</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">车型</label>
+          <select class="field" data-filter="type">
+            <option value="all">全部车型</option>
+            <option value="road">公路车</option>
+            <option value="mountain">山地车</option>
+            <option value="folding">折叠车</option>
+            <option value="commuter">通勤车</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">成色</label>
+          <select class="field" data-filter="condition">
+            <option value="all">不限成色</option>
+            <option value="9">9 成新以上</option>
+            <option value="8">8 成新以上</option>
+            <option value="7">7 成新以上</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button onclick="go('bikes')" class="btn btn-dark w-full h-11 text-[13px]">
+            <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+            搜索车辆
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-[1280px] px-5 py-12">
+    <div class="grid md:grid-cols-3 gap-4 reveal">
+      <div class="group rounded-2xl border border-slate-200 bg-white p-5 hover:border-mint-200 hover:shadow-card transition">
+        <div class="flex items-start justify-between">
+          <span class="h-10 w-10 rounded-xl bg-mint-50 border border-mint-100 grid place-items-center">
+            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-mint-600" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V7l7-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+          </span>
+          <span class="text-[10px] font-bold tracking-wider text-mint-600 bg-mint-50 px-2 py-1 rounded-md">12 项检测</span>
+        </div>
+        <h3 class="mt-3.5 text-[14.5px] font-semibold">官方 P2P 验车报告</h3>
+        <p class="mt-1.5 text-[12.5px] leading-6 text-slate-500">合作车行按统一工单检测刹车、传动、车架、轮组等 12 项，评分与验车师签名随车公示，不可篡改。</p>
+      </div>
+      <div class="group rounded-2xl border border-slate-200 bg-white p-5 hover:border-brand-200 hover:shadow-card transition">
+        <div class="flex items-start justify-between">
+          <span class="h-10 w-10 rounded-xl bg-brand-50 border border-brand-100 grid place-items-center">
+            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-brand-600" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1.5"/></svg>
+          </span>
+          <span class="text-[10px] font-bold tracking-wider text-brand-600 bg-brand-50 px-2 py-1 rounded-md">溯源</span>
+        </div>
+        <h3 class="mt-3.5 text-[14.5px] font-semibold">车架号防盗核验</h3>
+        <p class="mt-1.5 text-[12.5px] leading-6 text-slate-500">上架即比对车架号登记库与报失名单，重复登记、黑名单车辆自动拦截；成交后生成过户备案凭证。</p>
+      </div>
+      <div class="group rounded-2xl border border-slate-200 bg-white p-5 hover:border-slate-300 hover:shadow-card transition">
+        <div class="flex items-start justify-between">
+          <span class="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 grid place-items-center">
+            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-ink-800" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v2"/></svg>
+          </span>
+          <span class="text-[10px] font-bold tracking-wider text-slate-500 bg-slate-100 px-2 py-1 rounded-md">担保</span>
+        </div>
+        <h3 class="mt-3.5 text-[14.5px] font-semibold">第三方担保交易</h3>
+        <p class="mt-1.5 text-[12.5px] leading-6 text-slate-500">买家付款进入平台托管账户，线下验车确认后 T+1 放款给卖家；车况不符可全额退款，资金全程可追溯。</p>
+      </div>
+    </div>
+
+    <div class="mt-14 flex flex-wrap items-end justify-between gap-4 reveal">
+      <div>
+        <div class="flex items-center gap-2 text-[11px] font-semibold text-brand-600">
+          <span class="h-px w-6 bg-brand-500"></span>VERIFIED LISTINGS
+        </div>
+        <h2 class="mt-2 text-[26px] sm:text-[30px] font-bold tracking-tight">本周已核验好车</h2>
+        <p class="mt-1.5 text-[13px] text-slate-500">全部通过车架号核验与 12 项车况检测，支持线下看车与担保交易。</p>
+      </div>
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button class="type-chip is-active" data-type-filter="all">全部</button>
+        <button class="type-chip" data-type-filter="road">公路车</button>
+        <button class="type-chip" data-type-filter="mountain">山地车</button>
+        <button class="type-chip" data-type-filter="folding">折叠车</button>
+        <button class="type-chip" data-type-filter="commuter">通勤车</button>
+      </div>
+    </div>
+
+    <div id="homeGrid" class="mt-6 grid sm:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+
+    <div id="homeEmpty" class="hidden mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
+      <div class="mx-auto h-12 w-12 rounded-full bg-slate-100 grid place-items-center">
+        <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6 text-slate-400" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      </div>
+      <p class="mt-3 text-sm font-semibold">没有符合条件的车辆</p>
+      <p class="mt-1 text-[12.5px] text-slate-500">试试放宽价格或成色条件</p>
+      <button onclick="resetFilters()" class="btn btn-outline h-9 px-4 text-[12.5px] mt-4">清除筛选</button>
+    </div>
+
+    <div class="mt-14 rounded-2xl border border-slate-200 bg-white overflow-hidden reveal">
+      <div class="p-6 sm:p-7 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-[20px] font-bold tracking-tight">从发布到售后，一条完整的服务链</h2>
+          <p class="mt-1 text-[12.5px] text-slate-500">不是「挂个链接就成交」，而是把核验、履约、资金与维保都设计进流程。</p>
+        </div>
+        <button onclick="go('flow')" class="btn btn-outline h-9 px-4 text-[12.5px]">
+          查看完整流程
+          <svg viewBox="0 0 24 24" fill="none" class="h-3.5 w-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="p-5 sm:p-7 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3.5">
+          <span class="text-[10px] font-bold text-brand-600">01</span>
+          <p class="mt-1.5 text-[12.5px] font-semibold">上架核验</p>
+          <p class="mt-1 text-[10.5px] text-slate-500">车架号 + 照片审核</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3.5">
+          <span class="text-[10px] font-bold text-brand-600">02</span>
+          <p class="mt-1.5 text-[12.5px] font-semibold">官方验车</p>
+          <p class="mt-1 text-[10.5px] text-slate-500">12 项检测出报告</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3.5">
+          <span class="text-[10px] font-bold text-brand-600">03</span>
+          <p class="mt-1.5 text-[12.5px] font-semibold">预约看车</p>
+          <p class="mt-1 text-[10.5px] text-slate-500">履约金锁定诚意</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3.5">
+          <span class="text-[10px] font-bold text-brand-600">04</span>
+          <p class="mt-1.5 text-[12.5px] font-semibold">担保付款</p>
+          <p class="mt-1 text-[10.5px] text-slate-500">平台托管资金</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3.5">
+          <span class="text-[10px] font-bold text-brand-600">05</span>
+          <p class="mt-1.5 text-[12.5px] font-semibold">线下交付</p>
+          <p class="mt-1 text-[10.5px] text-slate-500">车行见证 + 确认单</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3.5">
+          <span class="text-[10px] font-bold text-brand-600">06</span>
+          <p class="mt-1.5 text-[12.5px] font-semibold">售后维保</p>
+          <p class="mt-1 text-[10.5px] text-slate-500">维修 / 配送 / 争议</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 relative overflow-hidden rounded-2xl bg-ink-900 p-7 sm:p-10 reveal">
+      <div class="absolute inset-0 hero-grid opacity-60"></div>
+      <div class="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-500/20 blur-3xl"></div>
+      <div class="relative flex flex-col lg:flex-row lg:items-center gap-6 justify-between">
+        <div>
+          <p class="text-[11px] font-semibold tracking-[0.2em] text-mint-400">SELL IN 3 MINUTES</p>
+          <h2 class="mt-2 text-[24px] sm:text-[28px] font-bold text-white tracking-tight">毕业带不走的车，交给下一位同学</h2>
+          <p class="mt-2 text-[13px] text-slate-400 max-w-xl">填写车架号与车况，预约合作车行免费验车。平台负责审核、曝光、担保交易与交付，你只管收钱。</p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+          <button onclick="openPublish()" class="btn btn-mint h-11 px-5 text-[13px]">一键上架 / 预约验车</button>
+          <button onclick="go('flow')" class="btn btn-ghost h-11 px-4 text-[13px]">了解服务</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BIKES ================= -->
+<section id="view-bikes" data-view="bikes" class="hidden">
+  <div class="border-b border-slate-200 bg-white">
+    <div class="mx-auto max-w-[1280px] px-5 py-7">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-[11px] font-semibold text-brand-600">
+            <span class="h-px w-6 bg-brand-500"></span>ALL VERIFIED BIKES
+          </div>
+          <h1 class="mt-2 text-[26px] font-bold tracking-tight">车辆列表</h1>
+          <p class="mt-1 text-[12.5px] text-slate-500">共 <span id="bikesCount" class="font-semibold text-ink-900">6</span> 辆在售 · 全部支持线下看车与担保交易</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-[11.5px] text-slate-500">排序</label>
+          <select id="sortSelect" class="field !h-9 !text-[12.5px] w-[150px]" data-filter="sort">
+            <option value="recommended">推荐排序</option>
+            <option value="price-asc">价格从低到高</option>
+            <option value="price-desc">价格从高到低</option>
+            <option value="condition">成色优先</option>
+            <option value="newest">最新上架</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-[1280px] px-5 py-8">
+    <div class="grid lg:grid-cols-[248px_1fr] gap-6">
+      <aside class="lg:sticky lg:top-[132px] h-fit">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+          <div class="flex items-center justify-between">
+            <p class="text-[13px] font-semibold">筛选条件</p>
+            <button onclick="resetFilters()" class="text-[11px] text-brand-600 hover:underline">重置</button>
+          </div>
+          <div class="mt-4 space-y-4">
+            <div>
+              <label class="lbl">价格区间</label>
+              <select class="field !h-10 !text-[12.5px]" data-filter="price">
+                <option value="all">不限价格</option>
+                <option value="0-1000">HK$ 1,000 以下</option>
+                <option value="1000-2000">HK$ 1,000 – 2,000</option>
+                <option value="2000-4000">HK$ 2,000 – 4,000</option>
+                <option value="4000+">HK$ 4,000 以上</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl">校区</label>
+              <select class="field !h-10 !text-[12.5px]" data-filter="campus">
+                <option value="all">全部校区</option>
+                <option value="Lingnan">Lingnan 岭南大学</option>
+                <option value="HKU">HKU 香港大学</option>
+                <option value="CUHK">CUHK 中文大学</option>
+                <option value="PolyU">PolyU 理工大学</option>
+                <option value="CityU">CityU 城市大学</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl">车型</label>
+              <select class="field !h-10 !text-[12.5px]" data-filter="type">
+                <option value="all">全部车型</option>
+                <option value="road">公路车</option>
+                <option value="mountain">山地车</option>
+                <option value="folding">折叠车</option>
+                <option value="commuter">通勤车</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl">成色</label>
+              <select class="field !h-10 !text-[12.5px]" data-filter="condition">
+                <option value="all">不限成色</option>
+                <option value="9">9 成新以上</option>
+                <option value="8">8 成新以上</option>
+                <option value="7">7 成新以上</option>
+              </select>
+            </div>
+            <div class="rounded-xl bg-mint-50 border border-mint-100 p-3">
+              <p class="text-[11px] font-semibold text-mint-700 flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" fill="none" class="h-3.5 w-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V7l7-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+                仅展示已核验车辆
+              </p>
+              <p class="mt-1 text-[10.5px] leading-5 text-mint-700/70">未通过车架号核验或验车的车辆不会出现在列表。</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+      <div>
+        <div id="bikesGrid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+        <div id="bikesEmpty" class="hidden rounded-2xl border border-dashed border-slate-300 bg-white p-16 text-center">
+          <p class="text-sm font-semibold">没有符合条件的车辆</p>
+          <p class="mt-1 text-[12.5px] text-slate-500">移除部分筛选条件后再试</p>
+          <button onclick="resetFilters()" class="btn btn-outline h-9 px-4 text-[12.5px] mt-4">清除筛选</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FLOW ================= -->
+<section id="view-flow" data-view="flow" class="hidden">
+  <div class="bg-ink-900 text-white relative overflow-hidden">
+    <div class="absolute inset-0 hero-grid"></div>
+    <div class="absolute -top-24 right-0 h-96 w-96 rounded-full bg-mint-500/10 blur-3xl"></div>
+    <div class="relative mx-auto max-w-[1280px] px-5 py-12">
+      <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] text-slate-300">
+        <span class="h-1.5 w-1.5 rounded-full bg-mint-400"></span>交付模块 2 · 配套服务全流程设计
+      </div>
+      <h1 class="mt-4 text-[30px] sm:text-[36px] font-bold tracking-tight">一辆车从「上架」到「售后闭环」</h1>
+      <p class="mt-2.5 max-w-2xl text-[13.5px] leading-7 text-slate-400">
+        七个阶段，明确每一步的责任方、时效 SLA、交付物与异常分支。网页产品承载信息与交易，线下合作车行承载验车与交付，两者共同构成 PSS。
+      </p>
+      <div class="mt-6 flex flex-wrap gap-2">
+        <span class="chip chip-dark">平台</span>
+        <span class="chip chip-dark">卖家</span>
+        <span class="chip chip-dark">买家</span>
+        <span class="chip chip-dark">合作车行</span>
+        <span class="chip chip-dark">担保账户</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-[1280px] px-5 py-10">
+    <div class="grid lg:grid-cols-[1fr_320px] gap-8">
+      <div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <div class="flex items-center justify-between">
+            <h2 class="text-[18px] font-bold tracking-tight">服务流程图</h2>
+            <span class="chip chip-blue">7 阶段 · 含异常分支</span>
+          </div>
+          <div id="flowTimeline" class="mt-6 space-y-0"></div>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <h2 class="text-[18px] font-bold tracking-tight">资金流与履约金机制</h2>
+          <p class="mt-1 text-[12px] text-slate-500">担保交易不是「平台收钱」，而是把付款与交付确认绑定，降低双方违约风险。</p>
+          <div class="mt-6 grid sm:grid-cols-3 gap-3">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <span class="text-[10px] font-bold text-brand-600">STEP 1</span>
+              <p class="mt-1.5 text-[13px] font-semibold">买家付款</p>
+              <p class="mt-1 text-[11px] leading-5 text-slate-500">车款 + 2% 担保费进入平台托管账户，卖家可见「已付款待交付」。</p>
+            </div>
+            <div class="rounded-xl border border-brand-200 bg-brand-50 p-4">
+              <span class="text-[10px] font-bold text-brand-600">STEP 2</span>
+              <p class="mt-1.5 text-[13px] font-semibold">平台冻结托管</p>
+              <p class="mt-1 text-[11px] leading-5 text-brand-700/70">资金不进入卖家账户；争议期 48 小时内可申请冻结。</p>
+            </div>
+            <div class="rounded-xl border border-mint-200 bg-mint-50 p-4">
+              <span class="text-[10px] font-bold text-mint-600">STEP 3</span>
+              <p class="mt-1.5 text-[13px] font-semibold">确认后 T+1 放款</p>
+              <p class="mt-1 text-[11px] leading-5 text-mint-700/70">买家线下验车确认、签署交付单后，次日结算给卖家。</p>
+            </div>
+          </div>
+          <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 flex gap-3">
+            <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-amber-600 shrink-0 mt-0.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+            <div>
+              <p class="text-[11.5px] font-semibold text-amber-800">履约金规则（看车预约）</p>
+              <p class="mt-1 text-[11px] leading-5 text-amber-700/80">预约时冻结 HK$50。按时到场验车后原路退还；无理由爽约不退，补偿卖家与车行的时段成本。车辆与描述严重不符时，买家可即时解冻并全额退回。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <h2 class="text-[18px] font-bold tracking-tight">方法论映射 · 五步概念生成法</h2>
+          <p class="mt-1 text-[12px] text-slate-500">课堂方法论与项目实际产出的对应关系，可直接用于报告正文与答辩。</p>
+          <div id="methodGrid" class="mt-5 grid sm:grid-cols-2 gap-3"></div>
+        </div>
+      </div>
+
+      <aside class="space-y-4">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 lg:sticky lg:top-[132px]">
+          <h3 class="text-[13px] font-semibold">关键角色与职责</h3>
+          <div class="mt-4 space-y-3.5">
+            <div class="flex gap-3">
+              <span class="h-8 w-8 rounded-lg bg-brand-50 border border-brand-100 grid place-items-center text-[10px] font-bold text-brand-600 shrink-0">平台</span>
+              <div><p class="text-[12px] font-medium">审核、撮合、托管、争议</p><p class="mt-0.5 text-[10.5px] leading-5 text-slate-500">制定验车标准与 SLA，维护车架号库。</p></div>
+            </div>
+            <div class="flex gap-3">
+              <span class="h-8 w-8 rounded-lg bg-mint-50 border border-mint-100 grid place-items-center text-[10px] font-bold text-mint-600 shrink-0">车行</span>
+              <div><p class="text-[12px] font-medium">验车、交付见证、维保</p><p class="mt-0.5 text-[10.5px] leading-5 text-slate-500">12 家校园周边合作门店，统一工单与报价。</p></div>
+            </div>
+            <div class="flex gap-3">
+              <span class="h-8 w-8 rounded-lg bg-slate-100 border border-slate-200 grid place-items-center text-[10px] font-bold text-slate-600 shrink-0">双方</span>
+              <div><p class="text-[12px] font-medium">卖家如实描述 · 买家按时履约</p><p class="mt-0.5 text-[10.5px] leading-5 text-slate-500">双向信用分，违约记录影响后续发布与预约。</p></div>
+            </div>
+          </div>
+          <div class="mt-5 border-t border-slate-100 pt-4">
+            <p class="text-[11px] text-slate-500">服务覆盖校区</p>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              <span class="chip chip-slate">Lingnan</span>
+              <span class="chip chip-slate">HKU</span>
+              <span class="chip chip-slate">CUHK</span>
+              <span class="chip chip-slate">PolyU</span>
+              <span class="chip chip-slate">CityU</span>
+            </div>
+          </div>
+          <button onclick="openPublish()" class="btn btn-primary w-full h-10 text-[12.5px] mt-5">预约免费验车</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ORDERS ================= -->
+<section id="view-orders" data-view="orders" class="hidden">
+  <div class="border-b border-slate-200 bg-white">
+    <div class="mx-auto max-w-[1280px] px-5 py-7">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-[11px] font-semibold text-brand-600">
+            <span class="h-px w-6 bg-brand-500"></span>MY ACTIVITY
+          </div>
+          <h1 class="mt-2 text-[26px] font-bold tracking-tight">我的订单与预约</h1>
+          <p class="mt-1 text-[12.5px] text-slate-500">看车预约、担保订单与资金状态，一页掌握。</p>
+        </div>
+        <div class="flex items-center gap-2 rounded-xl bg-slate-100 p-1">
+          <button class="seg-btn is-active" data-order-tab="bookings">我的预约 <span id="bookingCount" class="ml-0.5 text-[10px] opacity-70">2</span></button>
+          <button class="seg-btn" data-order-tab="orders">我的订单 <span id="orderCount" class="ml-0.5 text-[10px] opacity-70">1</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mx-auto max-w-[1280px] px-5 py-8">
+    <div class="grid lg:grid-cols-[1fr_300px] gap-6">
+      <div>
+        <div id="bookingList" class="space-y-3"></div>
+        <div id="orderList" class="space-y-3 hidden"></div>
+      </div>
+      <aside class="space-y-4">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+          <h3 class="text-[13px] font-semibold">资金与保障</h3>
+          <div class="mt-4 space-y-3">
+            <div class="flex items-center justify-between text-[12px]"><span class="text-slate-500">托管中金额</span><span class="font-semibold" id="escrowSum">HK$ 2,150</span></div>
+            <div class="flex items-center justify-between text-[12px]"><span class="text-slate-500">履约金冻结</span><span class="font-semibold" id="depositSum">HK$ 100</span></div>
+            <div class="flex items-center justify-between text-[12px]"><span class="text-slate-500">已完成订单</span><span class="font-semibold">3</span></div>
+          </div>
+          <div class="mt-4 rounded-xl bg-mint-50 border border-mint-100 p-3">
+            <p class="text-[10.5px] leading-5 text-mint-700">所有车款由平台托管，确认交付后 T+1 结算。若车况与验车报告不符，可在 48 小时内申请全额退款。</p>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+          <h3 class="text-[13px] font-semibold">需要帮助？</h3>
+          <p class="mt-2 text-[11.5px] leading-5 text-slate-500">争议工单 48 小时内响应，7 日内结案。赃车举报将冻结资金并移交警方。</p>
+          <button onclick="go('admin')" class="btn btn-outline w-full h-9 text-[12px] mt-3">查看争议处理台</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ADMIN ================= -->
+<section id="view-admin" data-view="admin" class="hidden">
+  <div class="border-b border-slate-200 bg-white">
+    <div class="mx-auto max-w-[1280px] px-5 py-7">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-[11px] font-semibold text-brand-600">
+            <span class="h-px w-6 bg-brand-500"></span>PLATFORM CONSOLE
+          </div>
+          <h1 class="mt-2 text-[26px] font-bold tracking-tight">平台管理后台</h1>
+          <p class="mt-1 text-[12.5px] text-slate-500">车架号核验、上架审核、验车排期与争议工单。演示账号：YC · 运营管理员</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chip chip-mint"><span class="h-1.5 w-1.5 rounded-full bg-mint-500"></span>系统运行正常</span>
+          <span class="chip chip-slate">数据更新于 10:24</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-[1280px] px-5 py-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="rounded-2xl border border-slate-200 bg-white p-5">
+        <p class="text-[11px] text-slate-500">待审核车辆</p>
+        <p class="mt-2 text-[26px] font-bold tracking-tight" id="kpiQueue">4</p>
+        <p class="mt-1 text-[10.5px] text-amber-600">其中 1 辆需人工复核</p>
+      </div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-5">
+        <p class="text-[11px] text-slate-500">待验车预约</p>
+        <p class="mt-2 text-[26px] font-bold tracking-tight" id="kpiInspect">7</p>
+        <p class="mt-1 text-[10.5px] text-slate-400">本周合作车行排期 82%</p>
+      </div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-5">
+        <p class="text-[11px] text-slate-500">争议工单</p>
+        <p class="mt-2 text-[26px] font-bold tracking-tight text-amber-600" id="kpiDispute">3</p>
+        <p class="mt-1 text-[10.5px] text-slate-400">均在 48h SLA 内</p>
+      </div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-5">
+        <p class="text-[11px] text-slate-500">本月成交额（GMV）</p>
+        <p class="mt-2 text-[26px] font-bold tracking-tight text-mint-600">HK$ 182,400</p>
+        <p class="mt-1 text-[10.5px] text-mint-600">较上月 +18.2%</p>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-slate-100">
+        <div>
+          <h2 class="text-[15px] font-bold tracking-tight">上架审核队列</h2>
+          <p class="mt-0.5 text-[11px] text-slate-500">点击行展开车架号核验详情；审核结果实时同步至前台。</p>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button class="seg-btn is-active" data-admin-filter="pending">待处理</button>
+          <button class="seg-btn" data-admin-filter="all">全部</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[860px] text-left">
+          <thead>
+            <tr class="bg-slate-50 text-[10.5px] uppercase tracking-wider text-slate-400">
+              <th class="px-5 py-3 font-semibold">车辆</th>
+              <th class="px-3 py-3 font-semibold">卖家</th>
+              <th class="px-3 py-3 font-semibold">车架号核验</th>
+              <th class="px-3 py-3 font-semibold">验车报告</th>
+              <th class="px-3 py-3 font-semibold">状态</th>
+              <th class="px-5 py-3 font-semibold text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="adminTable" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      <div class="p-5 border-b border-slate-100">
+        <h2 class="text-[15px] font-bold tracking-tight">争议与举报工单</h2>
+        <p class="mt-0.5 text-[11px] text-slate-500">车况不符、未交付、赃车举报三类工单，按 SLA 分级处理。</p>
+      </div>
+      <div id="disputeList" class="divide-y divide-slate-100"></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="mt-8 bg-ink-950 text-slate-400 no-print">
+  <div class="mx-auto max-w-[1280px] px-5 py-10">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2.5">
+          <span class="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-mint-500 grid place-items-center">
+            <svg viewBox="0 0 24 24" fill="none" class="h-4.5 w-4.5 text-white" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M5.5 17.5 9 8h5l4 9.5"/><path d="M9 8h6"/><path d="M13 8l2 5"/></svg>
+          </span>
+          <span class="text-white font-semibold">CycleTrade Campus</span>
+        </div>
+        <p class="mt-4 max-w-md text-[11.5px] leading-6">面向香港高校的校园二手单车交易与服务平台。以车架号核验、官方验车、担保交易与线下履约，重建同学之间的交易信任。</p>
+        <p class="mt-4 text-[10.5px] text-slate-600">课程演示原型 · CDT504 产品-服务一体化系统（PSS）· 数据均为模拟</p>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold text-slate-200">平台</p>
+        <div class="mt-3 space-y-2 text-[11.5px]">
+          <a href="#/bikes" class="block hover:text-white transition">在售车辆</a>
+          <a href="#/flow" class="block hover:text-white transition">服务流程</a>
+          <a href="#/orders" class="block hover:text-white transition">我的订单</a>
+          <a href="#/admin" class="block hover:text-white transition">后台审核</a>
+        </div>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold text-slate-200">服务</p>
+        <div class="mt-3 space-y-2 text-[11.5px]">
+          <a href="#/flow" class="block hover:text-white transition">官方验车标准</a>
+          <a href="#/flow" class="block hover:text-white transition">担保交易规则</a>
+          <a href="#/flow" class="block hover:text-white transition">履约金说明</a>
+          <a href="#/flow" class="block hover:text-white transition">争议处理</a>
+        </div>
+      </div>
+    </div>
+    <div class="mt-8 border-t border-white/[0.06] pt-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10.5px] text-slate-600">
+      <p>© 2026 CycleTrade Campus · 仅用于课程展示，不构成真实交易</p>
+      <p>香港 · 岭南大学 · 小组项目</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ================= MODAL: DETAIL ================= -->
+<div id="modalDetail" class="modal hidden" role="dialog" aria-modal="true" aria-label="车辆详情">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel w-full max-w-[1080px] max-h-[92vh] overflow-y-auto thin-scroll rounded-2xl bg-white shadow-2xl">
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<!-- ================= MODAL: BOOKING ================= -->
+<div id="modalBooking" class="modal hidden" role="dialog" aria-modal="true" aria-label="预约看车">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel w-full max-w-[560px] max-h-[92vh] overflow-y-auto thin-scroll rounded-2xl bg-white shadow-2xl">
+    <div class="flex items-start justify-between p-5 border-b border-slate-100">
+      <div>
+        <p class="text-[10.5px] font-semibold tracking-wider text-brand-600">BOOK A VIEWING</p>
+        <h3 class="mt-1 text-[18px] font-bold tracking-tight">预约线下看车</h3>
+      </div>
+      <button class="h-8 w-8 rounded-lg hover:bg-slate-100 grid place-items-center text-slate-400" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="p-5">
+      <div id="bookingBike" class="rounded-xl bg-slate-50 border border-slate-100 p-3"></div>
+
+      <div class="mt-5">
+        <label class="lbl">选择日期 <span class="req">*</span></label>
+        <div id="dateChips" class="grid grid-cols-4 gap-2"></div>
+      </div>
+      <div class="mt-4">
+        <label class="lbl">选择时段 <span class="req">*</span></label>
+        <div id="timeChips" class="grid grid-cols-3 gap-2"></div>
+      </div>
+      <div class="mt-4">
+        <label class="lbl">看车地点 <span class="req">*</span></label>
+        <select id="bookingShop" class="field">
+          <option value="岭南大学 · 永安广场合作车行">岭南大学 · 永安广场合作车行</option>
+          <option value="HKU · 西环合作车行">HKU · 西环合作车行</option>
+          <option value="CUHK · 沙田合作车行">CUHK · 沙田合作车行</option>
+          <option value="PolyU · 红磡合作车行">PolyU · 红磡合作车行</option>
+          <option value="CityU · 九龙塘合作车行">CityU · 九龙塘合作车行</option>
+        </select>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+        <div class="flex items-start gap-2.5">
+          <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-amber-600 shrink-0 mt-0.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <p class="text-[11.5px] font-semibold text-amber-800">履约保证金 HK$50</p>
+              <span class="text-[10px] text-amber-600">到场退还</span>
+            </div>
+            <p class="mt-1 text-[10.5px] leading-5 text-amber-700/80">仅冻结，不扣款。按时到场验车后原路退回；无理由爽约不退。</p>
+          </div>
+        </div>
+      </div>
+
+      <button id="bookingSubmit" onclick="submitBooking()" class="btn btn-primary w-full h-11 text-[13px] mt-5">确认预约并冻结履约金</button>
+      <p class="mt-2.5 text-center text-[10px] text-slate-400">提交即表示同意《看车预约与履约金规则》</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: PUBLISH ================= -->
+<div id="modalPublish" class="modal hidden" role="dialog" aria-modal="true" aria-label="发布闲置">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel w-full max-w-[640px] max-h-[92vh] overflow-y-auto thin-scroll rounded-2xl bg-white shadow-2xl">
+    <div class="flex items-start justify-between p-5 border-b border-slate-100">
+      <div>
+        <p class="text-[10.5px] font-semibold tracking-wider text-brand-600">SELL YOUR BIKE</p>
+        <h3 class="mt-1 text-[18px] font-bold tracking-tight">发布闲置 / 预约验车</h3>
+      </div>
+      <button class="h-8 w-8 rounded-lg hover:bg-slate-100 grid place-items-center text-slate-400" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div id="publishForm">
+      <div class="px-5 pt-4">
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2">
+            <span id="stepDot1" class="h-6 w-6 rounded-full bg-brand-600 text-white text-[10px] font-bold grid place-items-center">1</span>
+            <span class="text-[11.5px] font-medium">车辆信息</span>
+          </div>
+          <div class="h-px flex-1 bg-slate-200"></div>
+          <div class="flex items-center gap-2">
+            <span id="stepDot2" class="h-6 w-6 rounded-full bg-slate-100 text-slate-400 text-[10px] font-bold grid place-items-center">2</span>
+            <span id="stepLabel2" class="text-[11.5px] text-slate-400">预约验车</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="pubStep1" class="p-5">
+        <div class="grid sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="lbl">品牌 <span class="req">*</span></label>
+            <select id="pubBrand" class="field">
+              <option value="">请选择品牌</option>
+              <option>Giant</option><option>Trek</option><option>Merida</option><option>Brompton</option>
+              <option>Decathlon</option><option>Java</option><option>Specialized</option><option>其他</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">型号 <span class="req">*</span></label>
+            <input id="pubModel" class="field" placeholder="如 Escape 3">
+          </div>
+          <div>
+            <label class="lbl">买入价格（HK$）</label>
+            <input id="pubBuy" class="field" type="number" min="0" placeholder="2980">
+          </div>
+          <div>
+            <label class="lbl">拟售价格（HK$） <span class="req">*</span></label>
+            <input id="pubPrice" class="field" type="number" min="0" placeholder="1280">
+            <p id="priceHint" class="mt-1 text-[10px] text-slate-400">参考同款成交价：HK$1,150 – 1,420</p>
+          </div>
+          <div>
+            <label class="lbl">车型 <span class="req">*</span></label>
+            <select id="pubType" class="field">
+              <option value="commuter">通勤车</option><option value="road">公路车</option>
+              <option value="mountain">山地车</option><option value="folding">折叠车</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">校区 <span class="req">*</span></label>
+            <select id="pubCampus" class="field">
+              <option>Lingnan</option><option>HKU</option><option>CUHK</option><option>PolyU</option><option>CityU</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">成色（1–10）</label>
+            <select id="pubCondition" class="field">
+              <option value="9.5">9.5 几乎全新</option><option value="9">9 成新</option>
+              <option value="8.5" selected>8.5 成新</option><option value="8">8 成新</option>
+              <option value="7">7 成新</option><option value="6.5">6.5 成新</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">车架号 <span class="req">*</span></label>
+            <input id="pubFrame" class="field uppercase" placeholder="如 HK-LN-2024-88213" maxlength="24">
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <label class="lbl">上传车架号照片 <span class="req">*</span></label>
+          <label for="pubPhoto" id="photoDrop" class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-brand-300 hover:bg-brand-50/40 transition cursor-pointer p-6 text-center">
+            <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6 text-slate-400" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2.5"/><path d="M12 15V4M8 8l4-4 4 4"/></svg>
+            <p class="text-[11.5px] font-medium text-slate-600">点击上传，或拖拽图片到此处</p>
+            <p class="text-[10px] text-slate-400">建议拍摄五通处的车架钢印，JPG / PNG，≤ 5MB</p>
+            <img id="photoPreview" class="hidden mt-1 h-24 rounded-lg border border-slate-200 object-cover" alt="车架号照片预览">
+          </label>
+          <input id="pubPhoto" type="file" accept="image/*" class="hidden">
+        </div>
+
+        <div class="mt-4 flex items-start gap-2 rounded-xl bg-brand-50 border border-brand-100 p-3">
+          <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-brand-600 shrink-0 mt-0.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          <p class="text-[10.5px] leading-5 text-brand-700/80">车架号将与我们合作的登记库、报失名单比对。隐瞒赃车信息将永久封号并移交警方。</p>
+        </div>
+
+        <div class="mt-5 flex gap-2">
+          <button class="btn btn-outline flex-1 h-10 text-[12.5px]" data-close>取消</button>
+          <button onclick="pubNext()" class="btn btn-primary flex-1 h-10 text-[12.5px]">下一步 · 预约验车</button>
+        </div>
+      </div>
+
+      <div id="pubStep2" class="p-5 hidden">
+        <div class="rounded-xl bg-mint-50 border border-mint-100 p-3.5">
+          <p class="text-[11.5px] font-semibold text-mint-800">免费验车 · 平台补贴</p>
+          <p class="mt-1 text-[10.5px] leading-5 text-mint-700/80">验车通过后车辆自动上架；未通过则给出维修建议，可复检一次。</p>
+        </div>
+        <div class="mt-4 grid sm:grid-cols-2 gap-3.5">
+          <div class="sm:col-span-2">
+            <label class="lbl">合作车行 <span class="req">*</span></label>
+            <select id="pubShop" class="field">
+              <option>岭南大学 · 永安广场合作车行</option>
+              <option>HKU · 西环合作车行</option>
+              <option>CUHK · 沙田合作车行</option>
+              <option>PolyU · 红磡合作车行</option>
+              <option>CityU · 九龙塘合作车行</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">预约日期 <span class="req">*</span></label>
+            <select id="pubDate" class="field"></select>
+          </div>
+          <div>
+            <label class="lbl">预约时段 <span class="req">*</span></label>
+            <select id="pubTime" class="field">
+              <option>10:00 – 12:00</option><option>13:00 – 15:00</option>
+              <option>15:00 – 17:00</option><option>17:00 – 19:00</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="lbl">联系人手机 / WhatsApp <span class="req">*</span></label>
+            <input id="pubPhone" class="field" placeholder="如 9123 4567" inputmode="tel">
+          </div>
+        </div>
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+          <p class="text-[11px] font-semibold text-slate-700">上架后会发生什么？</p>
+          <ol class="mt-2 space-y-1.5 text-[10.5px] text-slate-500">
+            <li class="flex gap-2"><span class="text-brand-500 font-bold">1</span>平台 2 小时内完成车架号核验与图片审核</li>
+            <li class="flex gap-2"><span class="text-brand-500 font-bold">2</span>验车师按预约时段检测 12 项并生成报告</li>
+            <li class="flex gap-2"><span class="text-brand-500 font-bold">3</span>报告通过后自动上架，买家可预约看车</li>
+          </ol>
+        </div>
+        <div class="mt-5 flex gap-2">
+          <button onclick="pubBack()" class="btn btn-outline flex-1 h-10 text-[12.5px]">上一步</button>
+          <button onclick="submitPublish()" class="btn btn-primary flex-1 h-10 text-[12.5px]">提交并预约验车</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="publishSuccess" class="hidden p-8 text-center">
+      <div class="mx-auto h-16 w-16 rounded-full bg-mint-50 border border-mint-100 grid place-items-center">
+        <svg viewBox="0 0 24 24" fill="none" class="h-8 w-8 text-mint-500" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5L20 6.5"/></svg>
+      </div>
+      <h3 class="mt-4 text-[19px] font-bold tracking-tight">提交成功，等待核验</h3>
+      <p class="mt-2 text-[12px] text-slate-500">申请编号 <span id="publishId" class="font-semibold text-ink-900">CT-2026-0000</span></p>
+      <div class="mt-4 mx-auto max-w-sm rounded-xl bg-slate-50 border border-slate-200 p-3.5 text-left">
+        <div class="flex items-center justify-between text-[11px]"><span class="text-slate-500">当前状态</span><span class="chip chip-amber">车架号核验中</span></div>
+        <div class="flex items-center justify-between text-[11px] mt-2"><span class="text-slate-500">预计完成</span><span class="font-medium">2 小时内</span></div>
+        <div class="flex items-center justify-between text-[11px] mt-2"><span class="text-slate-500">验车预约</span><span id="publishSlot" class="font-medium">—</span></div>
+      </div>
+      <div class="mt-5 flex gap-2 max-w-sm mx-auto">
+        <button onclick="closeModal('modalPublish'); go('admin')" class="btn btn-outline flex-1 h-10 text-[12px]">查看审核进度</button>
+        <button onclick="closeModal('modalPublish'); go('home')" class="btn btn-primary flex-1 h-10 text-[12px]">返回首页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: CHECKOUT ================= -->
+<div id="modalCheckout" class="modal hidden" role="dialog" aria-modal="true" aria-label="担保交易">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel w-full max-w-[560px] max-h-[92vh] overflow-y-auto thin-scroll rounded-2xl bg-white shadow-2xl">
+    <div id="checkoutBody"></div>
+  </div>
+</div>
+
+<!-- ================= TOASTS ================= -->
+<div id="toastWrap" class="fixed bottom-5 right-5 z-[70] flex flex-col gap-2 no-print"></div>
+
+<script>
+/* ============================================================
+   CycleTrade Campus · 交互原型
+   结构：helpers → data → state → SVG → render → actions → init
+   ============================================================ */
+
+/* ---------- 1. Helpers ---------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const fmt = n => Number(n).toLocaleString('en-US');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const CAMPUS = { Lingnan:'岭南大学', HKU:'香港大学', CUHK:'中文大学', PolyU:'理工大学', CityU:'城市大学' };
+const WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
+const maskFrame = f => f.slice(0, 3) + '****' + f.slice(-4);
+
+/* ---------- 2. Data ---------- */
+const bikes = [
+  {
+    id:'b1', title:'Giant Escape 3 平把公路', brand:'Giant', model:'Escape 3',
+    type:'commuter', typeLabel:'平把通勤', price:1280, original:2980, condition:8.5,
+    campus:'Lingnan', seller:'陈同学', sellerRole:'24 届毕业生', mileage:'约 1,200 km',
+    frame:'HK-LN-2024-4821', listed:'2 小时前', views:126, student:true,
+    colors:{ frame:'#2563EB', accent:'#60A5FA', rim:'#94A3B8', bg1:'#EFF6FF', bg2:'#DBEAFE' },
+    desc:'大四毕业转手，日常往返宿舍与图书馆，停放在有盖单车棚。原厂车架无焊接修复，变速与刹车刚做完保养，附前后车灯与 U 型锁。',
+    highlights:['Shimano 8 速套件','原厂车架','含车灯与 U 型锁'],
+    inspection:{ score:8.5, brakes:9.0, drivetrain:8.5, frame:9.2, wheels:7.8, cockpit:8.0,
+      inspector:'Ken Tso', inspectorId:'V-0231', date:'2026-10-24',
+      shop:'岭南大学 · 永安广场合作车行', cert:'CT-2026-04821', checks:12,
+      notes:'后轮外胎有轻微龟裂，建议 3 个月内更换（已计入报价）；8 速变速定位准确，刹车皮剩余约 70%。' }
+  },
+  {
+    id:'b2', title:'Trek FX 2 Disc 通勤公路', brand:'Trek', model:'FX 2 Disc',
+    type:'road', typeLabel:'平把公路', price:2150, original:4680, condition:9.0,
+    campus:'HKU', seller:'林同学', sellerRole:'骑行社成员', mileage:'约 600 km',
+    frame:'HK-HKU-2023-1187', listed:'5 小时前', views:203, student:true,
+    colors:{ frame:'#0F766E', accent:'#2DD4BF', rim:'#94A3B8', bg1:'#ECFDF5', bg2:'#CCFBF1' },
+    desc:'2023 年购入，主要用于西环到校园通勤，周末偶尔骑行。碟刹制动力充足，全车无摔车记录，因换公路车出手。',
+    highlights:['液压碟刹','碳纤维前叉','9 成新'],
+    inspection:{ score:9.0, brakes:9.4, drivetrain:9.0, frame:9.5, wheels:8.6, cockpit:8.8,
+      inspector:'Ivy Lam', inspectorId:'V-0188', date:'2026-10-26',
+      shop:'HKU · 西环合作车行', cert:'CT-2026-04904', checks:12,
+      notes:'车架漆面仅下管有轻微运输划痕；轮组偏摆 < 1 mm；链条磨损量在安全范围内，无需更换。' }
+  },
+  {
+    id:'b3', title:'Brompton C Line 折叠车', brand:'Brompton', model:'C Line',
+    type:'folding', typeLabel:'折叠车', price:7800, original:14500, condition:8.0,
+    campus:'CUHK', seller:'黄老师', sellerRole:'教职员', mileage:'约 2,400 km',
+    frame:'UK-BR-2021-7742', listed:'1 天前', views:341, student:false,
+    colors:{ frame:'#EA580C', accent:'#FDBA74', rim:'#CBD5E1', bg1:'#FFF7ED', bg2:'#FFEDD5' },
+    desc:'经典 C Line 三速，港铁通勤利器。定期在原厂授权店保养，折叠关节顺滑，附原厂携行袋与货架。',
+    highlights:['英产原厂','三速内变','含携行袋'],
+    inspection:{ score:8.0, brakes:8.2, drivetrain:8.0, frame:8.6, wheels:7.6, cockpit:7.8,
+      inspector:'Ken Tso', inspectorId:'V-0231', date:'2026-10-22',
+      shop:'CUHK · 沙田合作车行', cert:'CT-2026-04677', checks:12,
+      notes:'折叠铰链无松旷；后轮圈有轻微刹车痕；建议更换把套（已计入报价）。' }
+  },
+  {
+    id:'b4', title:'Merida Big Nine 100 山地车', brand:'Merida', model:'Big Nine 100',
+    type:'mountain', typeLabel:'山地车', price:1650, original:3980, condition:7.5,
+    campus:'PolyU', seller:'张同学', sellerRole:'24 届毕业生', mileage:'约 2,800 km',
+    frame:'HK-PU-2022-3390', listed:'1 天前', views:178, student:true,
+    colors:{ frame:'#15803D', accent:'#4ADE80', rim:'#94A3B8', bg1:'#F0FDF4', bg2:'#DCFCE7' },
+    desc:'29 寸轮径，适合大埔、西贡一带轻度越野。前叉刚做过保养，刹车片新换，车架有几处正常使用掉漆。',
+    highlights:['29 寸轮组','100mm 前叉','新换刹车片'],
+    inspection:{ score:7.5, brakes:8.0, drivetrain:7.4, frame:7.8, wheels:7.0, cockpit:7.6,
+      inspector:'Marco Ho', inspectorId:'V-0306', date:'2026-10-21',
+      shop:'PolyU · 红磡合作车行', cert:'CT-2026-04560', checks:12,
+      notes:'前叉尘封有轻微渗油，避震功能正常；后飞轮磨损约 60%，建议 6 个月内更换。' }
+  },
+  {
+    id:'b5', title:'Decathlon Tilt 500 折叠车', brand:'Decathlon', model:'Tilt 500',
+    type:'folding', typeLabel:'折叠车', price:680, original:1499, condition:7.0,
+    campus:'CityU', seller:'Ana', sellerRole:'交换生', mileage:'约 900 km',
+    frame:'HK-CU-2024-5561', listed:'2 天前', views:96, student:true,
+    colors:{ frame:'#475569', accent:'#94A3B8', rim:'#CBD5E1', bg1:'#F1F5F9', bg2:'#E2E8F0' },
+    desc:'交换学期结束急售，单速折叠，适合校园内短途代步。折叠扣正常，轮胎与刹车均可正常使用，价格可小议。',
+    highlights:['单速免维护','可上港铁','低价代步'],
+    inspection:{ score:7.0, brakes:7.0, drivetrain:6.8, frame:7.4, wheels:6.8, cockpit:7.0,
+      inspector:'Ivy Lam', inspectorId:'V-0188', date:'2026-10-20',
+      shop:'CityU · 九龙塘合作车行', cert:'CT-2026-04412', checks:12,
+      notes:'车架折叠扣有使用痕迹但锁紧正常；前后胎花纹剩余约 40%；适合低强度校园通勤。' }
+  },
+  {
+    id:'b6', title:'Java Veloce 碳叉公路车', brand:'Java', model:'Veloce',
+    type:'road', typeLabel:'公路车', price:3200, original:6800, condition:8.8,
+    campus:'Lingnan', seller:'何同学', sellerRole:'单车队队员', mileage:'约 1,500 km',
+    frame:'HK-LN-2023-9024', listed:'2 天前', views:412, student:true,
+    colors:{ frame:'#DC2626', accent:'#F87171', rim:'#94A3B8', bg1:'#FEF2F2', bg2:'#FEE2E2' },
+    desc:'18 速弯把公路，碳纤维前叉，适合屯门公路与校内训练。因升级碳架出售，轮组与传动保养良好。',
+    highlights:['18 速弯把','碳纤维前叉','刚做全车保养'],
+    inspection:{ score:8.8, brakes:9.0, drivetrain:8.9, frame:8.8, wheels:8.5, cockpit:8.7,
+      inspector:'Marco Ho', inspectorId:'V-0306', date:'2026-10-25',
+      shop:'岭南大学 · 永安广场合作车行', cert:'CT-2026-04888', checks:12,
+      notes:'车架无裂纹与修复痕迹；轮组张力均匀；仅右手变有轻微擦伤，不影响功能。' }
+  }
+];
+
+const state = {
+  view:'home', q:'', campus:'all', type:'all', condition:'all', price:'all', sort:'recommended',
+  saved:new Set(),
+  detailId:null, bookingBike:null, checkoutBike:null,
+  bookingDraft:{ date:null, time:null },
+  orderTab:'bookings', adminFilter:'pending', publishStep:1, publishDone:false,
+  bookings:[
+    { id:'BK-2026-1027', bikeId:'b1', title:'Giant Escape 3 平把公路', price:1280, campus:'Lingnan',
+      date:'2026-10-31', time:'14:00 – 16:00', shop:'岭南大学 · 永安广场合作车行', deposit:50, status:'待确认' },
+    { id:'BK-2026-1024', bikeId:'b4', title:'Merida Big Nine 100 山地车', price:1650, campus:'PolyU',
+      date:'2026-11-02', time:'10:00 – 12:00', shop:'PolyU · 红磡合作车行', deposit:50, status:'已确认' }
+  ],
+  orders:[
+    { id:'CT-2026-04188', bikeId:'b2', title:'Trek FX 2 Disc 通勤公路', price:2150, fee:43, delivery:0,
+      total:2193, status:'托管中', step:2, date:'2026-10-27' }
+  ],
+  queue:[
+    { id:'CT-2026-0901', title:'Giant ATX 27.5 山地车', seller:'李同学 · PolyU', frame:'HK-PU-2024-6612',
+      frameStatus:'pass', report:'已出报告 8.2', status:'pending', date:'10:12', note:'图片清晰，车架号与登记信息一致。' },
+    { id:'CT-2026-0898', title:'Trek Domane AL 2 公路车', seller:'Wong S. · HKU', frame:'HK-HKU-2022-8841',
+      frameStatus:'duplicate', report:'待验车', status:'pending', date:'09:47', note:'车架号已在 2025-11 由另一账号登记，需人工复核转让凭证。' },
+    { id:'CT-2026-0895', title:'Specialized Rockhopper', seller:'何同学 · CUHK', frame:'HK-CU-2021-1077',
+      frameStatus:'blacklist', report:'已拒绝', status:'pending', date:'09:20', note:'命中 2025 年报失名单，已自动冻结并通知卖家提交购买凭证。' },
+    { id:'CT-2026-0890', title:'Brompton M6L 折叠车', seller:'Chan K. · Lingnan', frame:'UK-BR-2020-4432',
+      frameStatus:'pass', report:'已出报告 8.6', status:'pending', date:'昨天', note:'照片含五通钢印特写，核验通过，等待上架审核。' },
+    { id:'CT-2026-0887', title:'Merida Explorer 300', seller:'赵同学 · CityU', frame:'HK-CU-2023-2210',
+      frameStatus:'pass', report:'已出报告 8.0', status:'approved', date:'昨天', note:'已通过并上架。' }
+  ],
+  disputes:[
+    { id:'DSP-2026-032', type:'车况不符', title:'交付车辆刹车异响，与报告 9.0 分不符', sla:'剩余 18 小时', status:'处理中' },
+    { id:'DSP-2026-029', type:'未交付', title:'买家已付款，卖家未按预约时间到场', sla:'剩余 6 小时', status:'处理中' },
+    { id:'DSP-2026-025', type:'赃车举报', title:'买家举报车架号与登记信息不一致', sla:'已升级警方', status:'处理中' }
+  ]
+};
+
+/* ---------- 3. SVG 单车插画 ---------- */
+function bikeSVG(b, suffix = 'c'){
+  const c = b.colors;
+  const fold = b.type === 'folding';
+  const road = b.type === 'road';
+  const mtn  = b.type === 'mountain';
+  const R = fold ? 38 : 48;
+  const rear = { x:108, y:196 }, front = { x:332, y:196 };
+  const bb = { x:200, y:196 }, st = { x:172, y:118 }, ht = { x:286, y:114 }, hb = { x:296, y:140 };
+  const tire = road ? 4.5 : 7;
+
+  const wheel = w => {
+    const spokes = Array.from({ length: 12 }, (_, i) => {
+      const a = i * Math.PI / 6;
+      return `<line x1="${w.x}" y1="${w.y}" x2="${(w.x + Math.cos(a) * (R - 9)).toFixed(1)}" y2="${(w.y + Math.sin(a) * (R - 9)).toFixed(1)}" stroke="#94A3B8" stroke-width=".9" opacity=".7"/>`;
+    }).join('');
+    return `<g>
+      <circle cx="${w.x}" cy="${w.y}" r="${R}" fill="none" stroke="#1E293B" stroke-width="${tire}"/>
+      ${mtn ? `<circle cx="${w.x}" cy="${w.y}" r="${R}" fill="none" stroke="#0F172A" stroke-width="3" stroke-dasharray="2 7" opacity=".55"/>` : ''}
+      <circle cx="${w.x}" cy="${w.y}" r="${R - 8}" fill="none" stroke="${c.rim}" stroke-width="2.4" opacity=".9"/>
+      ${spokes}
+      <circle cx="${w.x}" cy="${w.y}" r="4.2" fill="#334155"/>
+    </g>`;
+  };
+
+  const saddle = `<path d="M146 101 C154 96 173 96 183 100 C185 103 181 106 172 106 L153 106 C148 106 144 103 146 101Z" fill="#1F2937"/>
+    <line x1="${st.x}" y1="${st.y}" x2="168" y2="101" stroke="#475569" stroke-width="4" stroke-linecap="round"/>`;
+
+  const bar = road
+    ? `<path d="M${ht.x} ${ht.y} L283 97 L262 97" stroke="#334155" stroke-width="4" stroke-linecap="round" fill="none"/>
+       <path d="M300 97 C310 97 311 106 306 114 L303 119" stroke="#334155" stroke-width="4" stroke-linecap="round" fill="none"/>`
+    : `<path d="M${ht.x} ${ht.y} L284 97 L${mtn ? 260 : 266} 97" stroke="#334155" stroke-width="4" stroke-linecap="round" fill="none"/>
+       <rect x="${mtn ? 256 : 262}" y="94.5" width="14" height="5" rx="2.5" fill="#1F2937"/>`;
+
+  const fork = mtn
+    ? `<path d="M${hb.x} ${hb.y} L${front.x} ${front.y}" stroke="#334155" stroke-width="6" stroke-linecap="round"/>
+       <path d="M${hb.x - 4} ${hb.y + 4} L${front.x - 4} ${front.y}" stroke="${c.frame}" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+       <path d="M${hb.x - 8} ${hb.y + 2} L${hb.x + 8} ${hb.y + 2}" stroke="${c.frame}" stroke-width="5" stroke-linecap="round"/>`
+    : `<path d="M${hb.x} ${hb.y} L${front.x} ${front.y}" stroke="${c.frame}" stroke-width="6" stroke-linecap="round"/>`;
+
+  return `<svg viewBox="0 0 440 250" class="w-full h-full bike-art" role="img" aria-label="${esc(b.title)} 示意图">
+    <defs>
+      <radialGradient id="hl-${b.id}-${suffix}" cx="50%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity=".85"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="shine-${b.id}-${suffix}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${c.accent}" stop-opacity=".55"/>
+        <stop offset="100%" stop-color="${c.accent}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="440" height="250" fill="url(#hl-${b.id}-${suffix})"/>
+    <circle cx="392" cy="44" r="46" fill="none" stroke="${c.accent}" stroke-width="1.2" opacity=".35"/>
+    <circle cx="392" cy="44" r="60" fill="none" stroke="${c.accent}" stroke-width="1" stroke-dasharray="3 7" opacity=".3"/>
+    <ellipse cx="220" cy="212" rx="158" ry="9" fill="#0F172A" opacity=".08"/>
+    ${wheel(rear)}${wheel(front)}
+    <g stroke="${c.frame}" stroke-width="7" stroke-linecap="round" fill="none">
+      <path d="M${rear.x} ${rear.y} L${bb.x} ${bb.y}"/>
+      <path d="M${rear.x} ${rear.y} L${st.x} ${st.y}"/>
+      <path d="M${st.x} ${st.y} L${bb.x} ${bb.y}"/>
+      <path d="M${st.x} ${st.y} L${ht.x} ${ht.y}"/>
+      <path d="M${hb.x} ${hb.y} L${bb.x} ${bb.y}"/>
+      <path d="M${ht.x} ${ht.y} L${hb.x} ${hb.y}" stroke-width="9"/>
+    </g>
+    ${fork}
+    <path d="M${st.x} ${st.y} L${ht.x} ${ht.y}" stroke="url(#shine-${b.id}-${suffix})" stroke-width="3" fill="none" opacity=".9"/>
+    ${saddle}${bar}
+    <g>
+      <path d="M${bb.x} 183 L${rear.x} 190 M${bb.x} 209 L${rear.x} 202" stroke="#64748B" stroke-width="1.8" opacity=".8"/>
+      <circle cx="${bb.x}" cy="${bb.y}" r="13" fill="none" stroke="#64748B" stroke-width="3"/>
+      <circle cx="${bb.x}" cy="${bb.y}" r="4" fill="#64748B"/>
+      <line x1="${bb.x}" y1="${bb.y}" x2="214" y2="212" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+      <rect x="208" y="211" width="15" height="4" rx="2" fill="#334155"/>
+      <circle cx="${rear.x}" cy="${rear.y}" r="6" fill="none" stroke="#64748B" stroke-width="2"/>
+    </g>
+    ${fold ? `<circle cx="231" cy="116" r="5" fill="${c.accent}" stroke="#fff" stroke-width="1.5"/><circle cx="231" cy="116" r="9" fill="none" stroke="${c.frame}" stroke-width="1.5" opacity=".5"/>` : ''}
+    <circle cx="392" cy="44" r="2.5" fill="${c.accent}" opacity=".7"/>
+  </svg>`;
+}
+
+/* ---------- 4. Cards & grids ---------- */
+function priceMatch(b){
+  const p = b.price, r = state.price;
+  if (r === 'all') return true;
+  if (r === '0-1000')   return p < 1000;
+  if (r === '1000-2000')return p >= 1000 && p < 2000;
+  if (r === '2000-4000')return p >= 2000 && p < 4000;
+  if (r === '4000+')    return p >= 4000;
+  return true;
+}
+function conditionMatch(b){
+  if (state.condition === 'all') return true;
+  return b.condition >= Number(state.condition);
+}
+function typeMatch(b){
+  if (state.type === 'all') return true;
+  if (state.type === 'student') return b.student;
+  return b.type === state.type;
+}
+function filteredBikes(){
+  const q = state.q.trim().toLowerCase();
+  let list = bikes.filter(b =>
+    typeMatch(b) && priceMatch(b) && conditionMatch(b) &&
+    (state.campus === 'all' || b.campus === state.campus) &&
+    (!q || (b.title + ' ' + b.brand + ' ' + b.model + ' ' + CAMPUS[b.campus] + ' ' + b.seller).toLowerCase().includes(q))
+  );
+  if (state.sort === 'price-asc')  list.sort((a, b) => a.price - b.price);
+  if (state.sort === 'price-desc') list.sort((a, b) => b.price - a.price);
+  if (state.sort === 'condition')  list.sort((a, b) => b.condition - a.condition);
+  if (state.sort === 'newest')     list.sort((a, b) => a.id < b.id ? 1 : -1);
+  return list;
+}
+
+function bikeCard(b){
+  const saved = state.saved.has(b.id);
+  const off = Math.round((1 - b.price / b.original) * 100);
+  return `<article data-bike="${b.id}" class="bike-card group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+    <div class="relative aspect-[16/10] overflow-hidden" style="background:linear-gradient(135deg,${b.colors.bg1},${b.colors.bg2})">
+      <div class="absolute inset-0 px-2 pt-2 pb-0">${bikeSVG(b, 'card-' + b.id)}</div>
+      <div class="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+        <span class="chip bg-white/90 text-mint-700 border border-mint-200 backdrop-blur shadow-sm">
+          <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5L20 6.5"/></svg>
+          已通过官方验车
+        </span>
+        <span class="chip bg-white/80 text-brand-700 border border-brand-100 backdrop-blur shadow-sm">
+          <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1.5"/></svg>
+          车架号已核验
+        </span>
+      </div>
+      <button data-save="${b.id}" class="absolute right-3 top-3 h-8 w-8 rounded-full bg-white/90 backdrop-blur border border-white grid place-items-center transition hover:scale-105 ${saved ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'}" aria-label="收藏">
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="${saved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.1 5.1 0 0 0-7.2 0L12 7.2l-1.6-1.6a5.1 5.1 0 0 0-7.2 7.2L12 21l8.8-8.2a5.1 5.1 0 0 0 0-7.2Z"/></svg>
+      </button>
+      <span class="absolute bottom-3 right-3 chip bg-ink-900/80 text-white backdrop-blur">${b.typeLabel}</span>
+    </div>
+    <div class="p-4">
+      <div class="flex items-start justify-between gap-2">
+        <h3 class="text-[14px] font-semibold leading-5 tracking-tight transition group-hover:text-brand-600">${b.title}</h3>
+        <span class="shrink-0 mt-0.5 text-[10px] text-slate-400">${b.listed}</span>
+      </div>
+      <p class="mt-1.5 text-[11.5px] text-slate-500">${CAMPUS[b.campus]} · ${b.condition}/10 成色 · ${b.mileage}</p>
+      <div class="mt-3 flex items-end gap-2">
+        <span class="text-[21px] font-bold tracking-tight">HK$${fmt(b.price)}</span>
+        <span class="mb-1 text-[11px] text-slate-400 line-through">HK$${fmt(b.original)}</span>
+        <span class="mb-1 ml-auto rounded border border-mint-100 bg-mint-50 px-1.5 py-0.5 text-[10px] font-semibold text-mint-600">省 ${off}%</span>
+      </div>
+      <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+        <div class="flex items-center gap-2">
+          <span class="h-6 w-6 rounded-full bg-slate-100 border border-slate-200 grid place-items-center text-[9px] font-bold text-slate-600">${esc(b.seller.slice(0,1))}</span>
+          <div class="leading-tight">
+            <p class="text-[10.5px] font-medium">${b.seller}</p>
+            <p class="text-[9.5px] text-slate-400">${b.sellerRole}</p>
+          </div>
+        </div>
+        <span class="flex items-center gap-0.5 text-[10.5px] font-medium text-brand-600">验车报告
+          <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </div>
+    </div>
+  </article>`;
+}
+
+function renderGrids(){
+  const list = filteredBikes();
+  const html = list.map(bikeCard).join('');
+  const home = $('#homeGrid'), all = $('#bikesGrid');
+  if (home) home.innerHTML = html;
+  if (all) all.innerHTML = html;
+  $('#homeEmpty')?.classList.toggle('hidden', list.length > 0);
+  $('#bikesEmpty')?.classList.toggle('hidden', list.length > 0);
+  const count = $('#bikesCount');
+  if (count) count.textContent = String(list.length);
+  $$('[data-type-filter]').forEach(el => el.classList.toggle('is-active', el.dataset.typeFilter === state.type));
+  $$('.cat-chip').forEach(el => el.classList.toggle('is-active', el.dataset.type === state.type));
+}
+
+function syncFilterUI(){
+  $$('[data-filter]').forEach(el => {
+    const key = el.dataset.filter;
+    let v = state[key];
+    if (key === 'type' && v === 'student') v = 'all';
+    el.value = v;
+  });
+}
+
+function resetFilters(){
+  Object.assign(state, { q:'', campus:'all', type:'all', condition:'all', price:'all', sort:'recommended' });
+  const gs = $('#globalSearch'); if (gs) gs.value = '';
+  syncFilterUI(); renderGrids();
+}
+
+/* ---------- 5. Detail ---------- */
+function bar(label, val){
+  const color = val >= 8.5 ? 'bg-mint-500' : val >= 7.5 ? 'bg-brand-500' : 'bg-amber-500';
+  return `<div class="flex items-center gap-2.5">
+    <span class="w-[52px] shrink-0 text-[10px] text-slate-500">${label}</span>
+    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full ${color}" style="width:${val * 10}%"></div></div>
+    <span class="w-6 text-right text-[10px] font-semibold text-slate-700">${val.toFixed(1)}</span>
+  </div>`;
+}
+
+function detailHTML(b){
+  const ins = b.inspection;
+  const off = Math.round((1 - b.price / b.original) * 100);
+  const circ = 2 * Math.PI * 30;
+  const dash = (ins.score / 10 * circ).toFixed(1);
+  return `<div class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-100 bg-white/95 px-5 py-3.5 backdrop-blur">
+      <div class="flex items-center gap-2.5">
+        <span class="h-8 w-8 rounded-lg bg-mint-50 border border-mint-100 grid place-items-center">
+          <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-mint-600" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V7l7-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+        </span>
+        <div>
+          <p class="text-[12.5px] font-semibold">车辆详情 · 官方核验</p>
+          <p class="text-[10px] text-slate-400">报告编号 ${ins.cert} · 数据不可篡改</p>
+        </div>
+      </div>
+      <button class="h-8 w-8 rounded-lg hover:bg-slate-100 grid place-items-center text-slate-400" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.02fr_.98fr]">
+      <div class="border-b border-slate-100 p-5 lg:border-b-0 lg:border-r">
+        <div class="relative aspect-[16/10] overflow-hidden rounded-2xl" style="background:linear-gradient(135deg,${b.colors.bg1},${b.colors.bg2})">
+          ${bikeSVG(b, 'detail')}
+          <span class="absolute left-3 top-3 chip bg-white/90 text-mint-700 border border-mint-200 backdrop-blur">
+            <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="m4.5 12.5 5 5L20 6.5"/></svg> 已通过 12 项检测
+          </span>
+          <span class="absolute bottom-3 right-3 chip bg-white/85 text-slate-500 backdrop-blur">${b.views} 次浏览</span>
+        </div>
+        <div class="mt-2.5 grid grid-cols-3 gap-2">
+          <div class="relative aspect-[16/10] overflow-hidden rounded-lg border border-slate-200" style="background:linear-gradient(135deg,${b.colors.bg1},${b.colors.bg2})">${bikeSVG(b, 't1')}</div>
+          <div class="relative aspect-[16/10] overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            <div class="absolute inset-0 grid place-items-center text-center">
+              <div><p class="text-[9px] font-bold tracking-[0.18em] text-slate-400">FRAME NO.</p><p class="mt-1 font-mono text-[10px] font-semibold text-slate-700">${maskFrame(b.frame)}</p></div>
+            </div>
+          </div>
+          <div class="relative aspect-[16/10] overflow-hidden rounded-lg border border-mint-200 bg-mint-50">
+            <div class="absolute inset-0 grid place-items-center text-center">
+              <div><p class="text-[9px] font-bold tracking-[0.18em] text-mint-600">INSPECTION</p><p class="mt-1 text-[11px] font-bold text-mint-700">${ins.score} / 10</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-2.5">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3"><p class="text-[9.5px] text-slate-400">所在校区</p><p class="mt-0.5 text-[12px] font-semibold">${CAMPUS[b.campus]}</p></div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3"><p class="text-[9.5px] text-slate-400">综合成色</p><p class="mt-0.5 text-[12px] font-semibold">${b.condition} / 10</p></div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3"><p class="text-[9.5px] text-slate-400">累计里程</p><p class="mt-0.5 text-[12px] font-semibold">${b.mileage}</p></div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-3"><p class="text-[9.5px] text-slate-400">上架时间</p><p class="mt-0.5 text-[12px] font-semibold">${b.listed}</p></div>
+        </div>
+
+        <div class="mt-4">
+          <h4 class="text-[12.5px] font-semibold">车辆描述</h4>
+          <p class="mt-1.5 text-[11.5px] leading-6 text-slate-500">${b.desc}</p>
+          <div class="mt-3 flex flex-wrap gap-1.5">${b.highlights.map(h => `<span class="chip chip-slate">${h}</span>`).join('')}</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col p-5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="chip chip-mint">官方验车 ${ins.score}</span>
+          <span class="chip chip-blue">车架号已核验</span>
+          <span class="chip chip-slate">${b.typeLabel}</span>
+        </div>
+        <h2 class="mt-2.5 text-[21px] font-bold leading-7 tracking-tight">${b.title}</h2>
+        <div class="mt-2 flex items-end gap-2">
+          <span class="text-[28px] font-bold tracking-tight">HK$${fmt(b.price)}</span>
+          <span class="mb-1 text-[12px] text-slate-400 line-through">HK$${fmt(b.original)}</span>
+          <span class="mb-1 rounded bg-mint-50 border border-mint-100 px-1.5 py-0.5 text-[10px] font-semibold text-mint-600">省 ${off}%</span>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+          <span class="h-8 w-8 rounded-full bg-white border border-slate-200 grid place-items-center text-[10px] font-bold text-slate-600">${esc(b.seller.slice(0,1))}</span>
+          <div class="leading-tight">
+            <p class="text-[11.5px] font-semibold">${b.seller} <span class="ml-1 font-normal text-slate-400">${b.sellerRole}</span></p>
+            <p class="mt-0.5 text-[10px] text-slate-400">信用分 4.9 · 已完成 6 笔交易</p>
+          </div>
+          <button onclick="toast('已发送咨询，卖家通常 2 小时内回复','success')" class="ml-auto btn btn-outline h-7 px-2.5 text-[10.5px]">联系卖家</button>
+        </div>
+
+        <div class="mt-4 rounded-2xl border-2 border-mint-100 bg-gradient-to-b from-mint-50/80 to-white p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-mint-600" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V7l7-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+              <p class="text-[12.5px] font-bold">官方 P2P 验车报告</p>
+            </div>
+            <span class="chip bg-white text-mint-700 border border-mint-200">VERIFIED</span>
+          </div>
+
+          <div class="mt-3.5 flex items-center gap-4">
+            <div class="relative h-[72px] w-[72px] shrink-0">
+              <svg viewBox="0 0 72 72" class="h-full w-full -rotate-90">
+                <circle cx="36" cy="36" r="30" fill="none" stroke="#E2E8F0" stroke-width="6"/>
+                <circle cx="36" cy="36" r="30" fill="none" stroke="#10B981" stroke-width="6" stroke-linecap="round" stroke-dasharray="${dash} ${circ.toFixed(1)}"/>
+              </svg>
+              <div class="absolute inset-0 grid place-items-center text-center">
+                <div><p class="text-[17px] font-bold leading-none">${ins.score}</p><p class="mt-0.5 text-[8.5px] text-slate-400">/ 10</p></div>
+              </div>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between text-[10px]"><span class="text-slate-400">车架号</span><span class="font-mono font-semibold">${maskFrame(b.frame)} <span class="ml-1 text-mint-600">✓</span></span></div>
+              <div class="mt-1.5 flex items-center justify-between text-[10px]"><span class="text-slate-400">验车日期</span><span class="font-medium">${ins.date}</span></div>
+              <div class="mt-1.5 flex items-center justify-between text-[10px]"><span class="text-slate-400">检测项目</span><span class="font-medium">${ins.checks} 项全部通过</span></div>
+            </div>
+          </div>
+
+          <div class="mt-3.5 space-y-2">
+            ${bar('刹车系统', ins.brakes)}
+            ${bar('传动变速', ins.drivetrain)}
+            ${bar('车架结构', ins.frame)}
+            ${bar('轮组轮胎', ins.wheels)}
+            ${bar('把组避震', ins.cockpit)}
+          </div>
+
+          <div class="mt-3 rounded-lg bg-white/80 border border-mint-100 p-2.5">
+            <p class="text-[9.5px] leading-5 text-slate-500"><span class="font-semibold text-slate-600">验车师备注：</span>${ins.notes}</p>
+          </div>
+
+          <div class="mt-3 flex items-end justify-between border-t border-mint-100 pt-3">
+            <div>
+              <p class="text-[10.5px] font-semibold">${ins.inspector} <span class="font-normal text-slate-400">· 认证验车师 ${ins.inspectorId}</span></p>
+              <p class="mt-0.5 text-[9.5px] text-slate-400">${ins.shop} · ${ins.date}</p>
+            </div>
+            <svg viewBox="0 0 64 28" class="h-7 w-16 text-mint-600" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20c6-1 7-11 12-10s3 9 8 8 5-12 10-10 3 9 8 7 5-9 10-7 4 6 6 5"/></svg>
+          </div>
+        </div>
+
+        <div class="mt-auto pt-4">
+          <div class="flex items-end justify-between">
+            <div>
+              <p class="text-[10px] text-slate-400">担保交易价（含 2% 服务费）</p>
+              <p class="text-[24px] font-bold tracking-tight">HK$${fmt(b.price)}</p>
+            </div>
+            <p class="text-[10px] text-slate-400">支持 48h 车况不符退款</p>
+          </div>
+          <div class="mt-2.5 grid grid-cols-2 gap-2">
+            <button onclick="openBooking('${b.id}')" class="btn btn-outline h-11 text-[12px]">预约看车 · HK$50</button>
+            <button onclick="openCheckout('${b.id}')" class="btn btn-primary h-11 text-[12px]">担保交易购买</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openBike(id){
+  const b = bikes.find(x => x.id === id);
+  if (!b) return;
+  state.detailId = id;
+  $('#detailBody').innerHTML = detailHTML(b);
+  openModal('modalDetail');
+}
+
+/* ---------- 6. Modal helpers ---------- */
+function openModal(id){
+  const m = document.getElementById(id);
+  if (!m) return;
+  m.classList.remove('hidden');
+  void m.offsetWidth; /* 强制回流，确保过渡在后台标签页也能触发 */
+  m.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id){
+  const m = document.getElementById(id);
+  if (!m) return;
+  m.classList.remove('is-open');
+  setTimeout(() => {
+    m.classList.add('hidden');
+    if (!$$('.modal.is-open').length) document.body.style.overflow = '';
+  }, 220);
+}
+function closeAllModals(){
+  $$('.modal.is-open').forEach(m => closeModal(m.id));
+}
+function toast(msg, type = 'success'){
+  const wrap = $('#toastWrap');
+  const styles = {
+    success:{ bar:'bg-mint-500', icon:'text-mint-600 bg-mint-50', path:'<path d="m4.5 12.5 5 5L20 6.5"/>' },
+    info:{ bar:'bg-brand-500', icon:'text-brand-600 bg-brand-50', path:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>' },
+    error:{ bar:'bg-rose-500', icon:'text-rose-600 bg-rose-50', path:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>' }
+  };
+  const s = styles[type] || styles.success;
+  const el = document.createElement('div');
+  el.className = 'toast pointer-events-auto flex w-[320px] items-start gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-lift relative overflow-hidden';
+  el.innerHTML = `<span class="mt-0.5 h-7 w-7 shrink-0 rounded-lg ${s.icon} grid place-items-center">
+      <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${s.path}</svg>
+    </span>
+    <p class="flex-1 pt-0.5 text-[11.5px] leading-5 text-slate-600">${msg}</p>
+    <button class="text-slate-300 hover:text-slate-500" aria-label="关闭">
+      <svg viewBox="0 0 24 24" fill="none" class="h-3.5 w-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <span class="absolute left-0 top-0 h-full w-1 ${s.bar} rounded-l-xl"></span>`;
+  el.querySelector('button').addEventListener('click', () => removeToast(el));
+  wrap.appendChild(el);
+  setTimeout(() => removeToast(el), 3600);
+}
+function removeToast(el){
+  if (!el || !el.parentNode) return;
+  el.classList.add('out');
+  setTimeout(() => el.remove(), 240);
+}
+
+/* ---------- 7. Booking ---------- */
+function nextDates(n){
+  const out = [];
+  const base = new Date();
+  base.setHours(12, 0, 0, 0);
+  for (let i = 1; i <= n; i++){
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    out.push({ iso, md:`${d.getMonth() + 1}/${d.getDate()}`, wd:WEEK[d.getDay()] });
+  }
+  return out;
+}
+function renderDateChips(){
+  const dates = nextDates(7);
+  if (!state.bookingDraft.date) state.bookingDraft.date = dates[0].iso;
+  $('#dateChips').innerHTML = dates.map(d => {
+    const on = state.bookingDraft.date === d.iso;
+    return `<button type="button" data-date="${d.iso}" class="rounded-xl border px-2 py-2 text-center transition ${on ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-100' : 'border-slate-200 hover:border-slate-300 bg-white'}">
+      <span class="block text-[9.5px] ${on ? 'text-brand-600' : 'text-slate-400'}">${d.wd}</span>
+      <span class="mt-0.5 block text-[12px] font-semibold ${on ? 'text-brand-700' : 'text-slate-700'}">${d.md}</span>
+    </button>`;
+  }).join('');
+}
+function renderTimeChips(){
+  const slots = ['10:00 – 12:00', '14:00 – 16:00', '17:00 – 19:00'];
+  if (!state.bookingDraft.time) state.bookingDraft.time = slots[1];
+  $('#timeChips').innerHTML = slots.map(t => {
+    const on = state.bookingDraft.time === t;
+    return `<button type="button" data-time="${t}" class="rounded-xl border py-2 text-[11px] font-medium transition ${on ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-100' : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'}">${t}</button>`;
+  }).join('');
+}
+function openBooking(id){
+  const b = bikes.find(x => x.id === id);
+  if (!b) return;
+  state.bookingBike = id;
+  state.bookingDraft = { date:null, time:null };
+  const shopMap = {
+    Lingnan:'岭南大学 · 永安广场合作车行', HKU:'HKU · 西环合作车行', CUHK:'CUHK · 沙田合作车行',
+    PolyU:'PolyU · 红磡合作车行', CityU:'CityU · 九龙塘合作车行'
+  };
+  $('#bookingBike').innerHTML = `<div class="flex items-center gap-3">
+    <div class="h-14 w-20 shrink-0 overflow-hidden rounded-lg" style="background:linear-gradient(135deg,${b.colors.bg1},${b.colors.bg2})">${bikeSVG(b, 'bk')}</div>
+    <div class="min-w-0">
+      <p class="truncate text-[12.5px] font-semibold">${b.title}</p>
+      <p class="mt-0.5 text-[10.5px] text-slate-500">HK$${fmt(b.price)} · ${CAMPUS[b.campus]}</p>
+    </div>
+    <span class="chip chip-mint ml-auto shrink-0">已验车</span>
+  </div>`;
+  $('#bookingShop').value = shopMap[b.campus] || $('#bookingShop').options[0].value;
+  renderDateChips(); renderTimeChips();
+  closeModal('modalDetail');
+  openModal('modalBooking');
+}
+function submitBooking(){
+  const b = bikes.find(x => x.id === state.bookingBike);
+  if (!b || !state.bookingDraft.date || !state.bookingDraft.time) return;
+  const id = 'BK-2026-' + Math.floor(1000 + Math.random() * 8999);
+  state.bookings.unshift({
+    id, bikeId:b.id, title:b.title, price:b.price, campus:b.campus,
+    date:state.bookingDraft.date, time:state.bookingDraft.time,
+    shop:$('#bookingShop').value, deposit:50, status:'待确认'
+  });
+  closeModal('modalBooking');
+  renderOrders();
+  setOrderTab('bookings');
+  go('orders');
+  toast(`预约已提交（${state.bookingDraft.date} ${state.bookingDraft.time}），履约金 HK$50 已冻结`, 'success');
+}
+
+/* ---------- 8. Checkout ---------- */
+function openCheckout(id){
+  const b = bikes.find(x => x.id === id);
+  if (!b) return;
+  state.checkoutBike = id;
+  const fee = Math.round(b.price * 0.02);
+  $('#checkoutBody').innerHTML = `<div class="flex items-start justify-between border-b border-slate-100 p-5">
+      <div>
+        <p class="text-[10.5px] font-semibold tracking-wider text-brand-600">ESCROW CHECKOUT</p>
+        <h3 class="mt-1 text-[18px] font-bold tracking-tight">第三方担保交易</h3>
+      </div>
+      <button class="h-8 w-8 rounded-lg hover:bg-slate-100 grid place-items-center text-slate-400" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="p-5">
+      <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+        <div class="h-14 w-20 shrink-0 overflow-hidden rounded-lg" style="background:linear-gradient(135deg,${b.colors.bg1},${b.colors.bg2})">${bikeSVG(b, 'ck')}</div>
+        <div class="min-w-0">
+          <p class="truncate text-[12.5px] font-semibold">${b.title}</p>
+          <p class="mt-0.5 text-[10.5px] text-slate-500">${CAMPUS[b.campus]} · ${b.condition}/10 成色 · 已验车</p>
+        </div>
+      </div>
+
+      <div class="mt-4 space-y-2 rounded-xl bg-slate-50 border border-slate-200 p-4 text-[12px]">
+        <div class="flex justify-between"><span class="text-slate-500">车辆价格</span><span class="font-medium">HK$ ${fmt(b.price)}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">平台担保服务费（2%）</span><span class="font-medium">HK$ ${fmt(fee)}</span></div>
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-slate-500 flex items-center gap-1.5">同城配送 <span class="chip chip-slate !text-[9px] !py-0">可选</span></span>
+          <span class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-400">HK$ 40</span>
+            <input type="checkbox" id="deliveryCheck" onchange="updateCheckoutTotal()" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+          </span>
+        </label>
+        <div class="border-t border-slate-200 pt-2.5 flex items-end justify-between">
+          <span class="text-[12px] font-semibold">应付合计</span>
+          <span id="checkoutTotal" class="text-[20px] font-bold tracking-tight">HK$ ${fmt(b.price + fee)}</span>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-mint-100 bg-mint-50 p-3.5">
+        <p class="text-[11px] font-semibold text-mint-800">资金托管说明</p>
+        <div class="mt-2.5 flex items-center gap-1.5 text-[9.5px] text-mint-700">
+          <span class="rounded bg-white px-1.5 py-1 font-medium border border-mint-100">买家付款</span>
+          <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span class="rounded bg-white px-1.5 py-1 font-medium border border-mint-100">平台冻结</span>
+          <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span class="rounded bg-white px-1.5 py-1 font-medium border border-mint-100">交付确认</span>
+          <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span class="rounded bg-white px-1.5 py-1 font-semibold border border-mint-200">T+1 放款</span>
+        </div>
+        <p class="mt-2 text-[9.5px] leading-4 text-mint-700/70">确认收货前资金不会进入卖家账户；48 小时内车况不符可申请全额退款。</p>
+      </div>
+
+      <button onclick="confirmOrder()" class="btn btn-primary w-full h-11 text-[13px] mt-4">
+        确认支付 HK$ <span id="checkoutBtnAmt">${fmt(b.price + fee)}</span>
+      </button>
+      <p class="mt-2 text-center text-[9.5px] text-slate-400">演示环境，不会产生真实扣款</p>
+    </div>`;
+  closeModal('modalDetail');
+  openModal('modalCheckout');
+}
+function updateCheckoutTotal(){
+  const b = bikes.find(x => x.id === state.checkoutBike);
+  if (!b) return;
+  const fee = Math.round(b.price * 0.02);
+  const delivery = $('#deliveryCheck')?.checked ? 40 : 0;
+  $('#checkoutTotal').textContent = 'HK$ ' + fmt(b.price + fee + delivery);
+  $('#checkoutBtnAmt').textContent = fmt(b.price + fee + delivery);
+}
+function confirmOrder(){
+  const b = bikes.find(x => x.id === state.checkoutBike);
+  if (!b) return;
+  const fee = Math.round(b.price * 0.02);
+  const delivery = $('#deliveryCheck')?.checked ? 40 : 0;
+  const id = 'CT-2026-' + Math.floor(10000 + Math.random() * 89999);
+  state.orders.unshift({
+    id, bikeId:b.id, title:b.title, price:b.price, fee, delivery,
+    total:b.price + fee + delivery, status:'托管中', step:2, date:new Date().toISOString().slice(0, 10)
+  });
+  closeModal('modalCheckout');
+  renderOrders(); setOrderTab('orders'); go('orders');
+  toast('支付成功，资金已进入平台托管。请与卖家预约线下交付。', 'success');
+}
+
+/* ---------- 9. Publish ---------- */
+function pubSetStep(n){
+  state.publishStep = n;
+  $('#pubStep1').classList.toggle('hidden', n !== 1);
+  $('#pubStep2').classList.toggle('hidden', n !== 2);
+  $('#stepDot1').className = 'h-6 w-6 rounded-full text-[10px] font-bold grid place-items-center ' + (n === 1 ? 'bg-brand-600 text-white' : 'bg-mint-500 text-white');
+  $('#stepDot2').className = 'h-6 w-6 rounded-full text-[10px] font-bold grid place-items-center ' + (n === 2 ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-400');
+  $('#stepLabel2').className = 'text-[11.5px] ' + (n === 2 ? 'font-medium text-ink-900' : 'text-slate-400');
+}
+function openPublish(step = 1){
+  $('#publishSuccess').classList.add('hidden');
+  $('#publishForm').classList.remove('hidden');
+  if (state.publishDone) resetPublish();
+  const hasDraft = !!$('#pubBrand').value;
+  pubSetStep(hasDraft ? step : 1);
+  openModal('modalPublish');
+}
+function resetPublish(){
+  ['pubBrand','pubModel','pubBuy','pubPrice','pubFrame','pubPhone'].forEach(id => { $('#' + id).value = ''; });
+  $('#pubType').value = 'commuter';
+  $('#pubCampus').value = 'Lingnan';
+  $('#pubCondition').value = '8.5';
+  $('#photoPreview').classList.add('hidden');
+  $('#photoPreview').removeAttribute('src');
+  $('#priceHint').textContent = '参考同款成交价：HK$1,150 – 1,420';
+  $$('.field-error').forEach(el => el.classList.remove('field-error'));
+  state.publishDone = false;
+}
+function markError(el, on){ el.classList.toggle('field-error', on); }
+function pubNext(){
+  const brand = $('#pubBrand'), model = $('#pubModel'), price = $('#pubPrice'), frame = $('#pubFrame');
+  let ok = true;
+  [[brand, !brand.value], [model, !model.value.trim()], [price, !price.value || Number(price.value) <= 0], [frame, frame.value.trim().length < 6]].forEach(([el, bad]) => {
+    markError(el, bad); if (bad) ok = false;
+  });
+  if (!ok){ toast('请完整填写品牌、型号、拟售价格与有效车架号', 'error'); return; }
+  const buy = Number($('#pubBuy').value || 0), sell = Number(price.value);
+  if (buy && sell > buy){ toast('拟售价格高于买入价，请确认是否填写有误', 'info'); }
+  pubSetStep(2);
+  $('#modalPublish .modal-panel').scrollTo({ top:0, behavior:'smooth' });
+}
+function pubBack(){ pubSetStep(1); }
+function submitPublish(){
+  const phoneEl = $('#pubPhone');
+  const phone = phoneEl.value.replace(/\s/g, '');
+  markError(phoneEl, !/^\d{8}$/.test(phone));
+  if (!/^\d{8}$/.test(phone)){ toast('请输入 8 位香港手机号码', 'error'); return; }
+  const brand = $('#pubBrand').value, model = $('#pubModel').value.trim();
+  const id = 'CT-2026-' + Math.floor(1000 + Math.random() * 8999);
+  state.queue.unshift({
+    id, title:`${brand} ${model}`, seller:'我（演示账号） · ' + $('#pubCampus').value,
+    frame:$('#pubFrame').value.toUpperCase(), frameStatus:'pending', report:'待验车',
+    status:'pending', date:'刚刚', note:'新提交，等待车架号比对与图片审核。'
+  });
+  state.publishDone = true;
+  $('#publishId').textContent = id;
+  $('#publishSlot').textContent = `${$('#pubDate').value} ${$('#pubTime').value}`;
+  $('#publishForm').classList.add('hidden');
+  $('#publishSuccess').classList.remove('hidden');
+  renderAdmin();
+  toast('已提交审核，车架号核验预计 2 小时内完成', 'success');
+}
+
+/* ---------- 10. Orders ---------- */
+function statusChip(s){
+  if (s === '待确认') return 'chip-amber';
+  if (s === '已确认') return 'chip-blue';
+  if (s === '已完成') return 'chip-mint';
+  if (s === '托管中') return 'chip-blue';
+  if (s === '已取消') return 'chip-slate';
+  return 'chip-slate';
+}
+function orderStepHTML(step){
+  const steps = ['已拍下', '资金托管', '待交付', '已完成'];
+  return `<div class="flex items-center gap-1.5">
+    ${steps.map((s, i) => {
+      const done = i <= step;
+      return `<div class="flex items-center gap-1.5 ${i === steps.length - 1 ? '' : 'flex-1'}">
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="h-5 w-5 rounded-full grid place-items-center text-[8.5px] font-bold ${done ? 'bg-mint-500 text-white' : 'bg-slate-100 text-slate-400'}">${done ? '✓' : i + 1}</span>
+          <span class="text-[9.5px] ${done ? 'text-slate-700 font-medium' : 'text-slate-400'}">${s}</span>
+        </div>
+        ${i < steps.length - 1 ? `<div class="h-0.5 flex-1 ${i < step ? 'bg-mint-400' : 'bg-slate-200'}"></div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+function renderOrders(){
+  $('#bookingList').innerHTML = state.bookings.length ? state.bookings.map(bk => {
+    const d = bk.date.split('-');
+    return `<div class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="flex h-14 w-20 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-50 border border-brand-100">
+          <span class="text-[16px] font-bold leading-none text-brand-700">${Number(d[2])}</span>
+          <span class="mt-1 text-[9px] text-brand-500">${d[1]} 月 · ${bk.time.split(' ')[0]}</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="text-[13px] font-semibold">${bk.title}</p>
+            <span class="chip ${statusChip(bk.status)}">${bk.status}</span>
+          </div>
+          <p class="mt-1 text-[11px] text-slate-500">${bk.date} ${bk.time} · ${bk.shop}</p>
+          <p class="mt-0.5 text-[10px] text-slate-400">预约编号 ${bk.id} · 履约金 HK$${bk.deposit}（到场退还）</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="cancelBooking('${bk.id}')" class="btn btn-outline h-8 px-3 text-[11px]">取消预约</button>
+          <button onclick="openBike('${bk.bikeId}')" class="btn btn-dark h-8 px-3 text-[11px]">查看车辆</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : emptyState('还没有看车预约', '去车辆列表挑一辆，预约线下看车');
+
+  $('#orderList').innerHTML = state.orders.length ? state.orders.map(o => `
+    <div class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="h-11 w-14 shrink-0 rounded-lg bg-slate-100 grid place-items-center">
+            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-slate-400" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M5.5 17.5 9 8h5l4 9.5"/><path d="M9 8h6"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="truncate text-[13px] font-semibold">${o.title}</p>
+              <span class="chip ${statusChip(o.status)}">${o.status}</span>
+            </div>
+            <p class="mt-0.5 text-[10px] text-slate-400">订单号 ${o.id} · 下单 ${o.date}</p>
+          </div>
+        </div>
+        <div class="text-right shrink-0">
+          <p class="text-[16px] font-bold tracking-tight">HK$${fmt(o.total)}</p>
+          <p class="text-[9px] text-slate-400">含担保费 HK$${o.fee}${o.delivery ? ' + 配送 HK$40' : ''}</p>
+        </div>
+      </div>
+      <div class="mt-4 rounded-xl bg-slate-50 border border-slate-100 p-3">${orderStepHTML(o.step)}</div>
+      <div class="mt-3 flex items-center justify-between gap-2">
+        <p class="text-[10px] text-slate-400">${o.step >= 3 ? '交易已完成，资金已结算给卖家' : '资金由平台托管，确认交付后 T+1 放款'}</p>
+        <div class="flex gap-2">
+          ${o.step < 3 ? `<button onclick="refundOrder('${o.id}')" class="btn btn-outline h-8 px-3 text-[10.5px]">申请退款</button>
+          <button onclick="confirmDelivery('${o.id}')" class="btn btn-primary h-8 px-3 text-[10.5px]">确认收货</button>` :
+          `<button onclick="openBike('${o.bikeId}')" class="btn btn-outline h-8 px-3 text-[10.5px]">查看车辆</button>`}
+        </div>
+      </div>
+    </div>`).join('') : emptyState('还没有担保订单', '在车辆详情页选择「担保交易购买」');
+
+  $('#bookingCount').textContent = state.bookings.length;
+  $('#orderCount').textContent = state.orders.length;
+  const escrow = state.orders.filter(o => o.step < 3).reduce((s, o) => s + o.total, 0);
+  const dep = state.bookings.filter(b => b.status !== '已取消').reduce((s, b) => s + b.deposit, 0);
+  if ($('#escrowSum')) $('#escrowSum').textContent = 'HK$ ' + fmt(escrow);
+  if ($('#depositSum')) $('#depositSum').textContent = 'HK$ ' + fmt(dep);
+}
+function emptyState(t, d){
+  return `<div class="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+    <p class="text-[13px] font-semibold">${t}</p><p class="mt-1 text-[11.5px] text-slate-500">${d}</p>
+    <button onclick="go('bikes')" class="btn btn-outline h-9 px-4 text-[11.5px] mt-4">去逛逛</button>
+  </div>`;
+}
+function cancelBooking(id){
+  const b = state.bookings.find(x => x.id === id);
+  if (!b || b.status === '已取消') return;
+  b.status = '已取消';
+  renderOrders();
+  toast('预约已取消，履约金将在 1 个工作日内解冻', 'info');
+}
+function confirmDelivery(id){
+  const o = state.orders.find(x => x.id === id);
+  if (!o) return;
+  o.step = 3; o.status = '已完成';
+  renderOrders();
+  toast('已确认收货，平台将在 T+1 将车款结算给卖家', 'success');
+}
+function refundOrder(id){
+  const o = state.orders.find(x => x.id === id);
+  if (!o) return;
+  o.status = '退款中'; o.step = 1;
+  renderOrders();
+  toast('退款申请已提交，客服将在 48 小时内联系双方', 'info');
+}
+function setOrderTab(tab){
+  state.orderTab = tab;
+  $$('[data-order-tab]').forEach(el => el.classList.toggle('is-active', el.dataset.orderTab === tab));
+  $('#bookingList').classList.toggle('hidden', tab !== 'bookings');
+  $('#orderList').classList.toggle('hidden', tab !== 'orders');
+}
+
+/* ---------- 11. Admin ---------- */
+function frameChip(s){
+  if (s === 'pass') return '<span class="chip chip-mint">✓ 通过</span>';
+  if (s === 'duplicate') return '<span class="chip chip-amber">疑似重复</span>';
+  if (s === 'blacklist') return '<span class="chip bg-rose-50 text-rose-600 border border-rose-200">黑名单命中</span>';
+  return '<span class="chip chip-slate">核验中</span>';
+}
+function renderAdmin(){
+  const list = state.adminFilter === 'pending' ? state.queue.filter(q => q.status === 'pending') : state.queue;
+  const tbody = $('#adminTable');
+  if (!tbody) return;
+  tbody.innerHTML = list.length ? list.map(q => `
+    <tr class="cursor-pointer hover:bg-slate-50/70" data-admin-toggle="${q.id}">
+      <td class="px-5 py-3.5">
+        <div class="flex items-center gap-2.5">
+          <span class="h-9 w-9 rounded-lg bg-slate-100 grid place-items-center shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4 text-slate-400" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M5.5 17.5 9 8h5l4 9.5"/><path d="M9 8h6"/></svg>
+          </span>
+          <div><p class="text-[12px] font-medium">${q.title}</p><p class="text-[9.5px] text-slate-400">${q.id} · ${q.date}</p></div>
+        </div>
+      </td>
+      <td class="px-3 py-3.5 text-[11px] text-slate-500">${q.seller}</td>
+      <td class="px-3 py-3.5">${frameChip(q.frameStatus)}</td>
+      <td class="px-3 py-3.5 text-[11px] text-slate-500">${q.report}</td>
+      <td class="px-3 py-3.5">${q.status === 'pending' ? '<span class="chip chip-amber">待处理</span>' : q.status === 'approved' ? '<span class="chip chip-mint">已通过</span>' : '<span class="chip chip-slate">已驳回</span>'}</td>
+      <td class="px-5 py-3.5 text-right">
+        ${q.status === 'pending' ? `<button data-approve="${q.id}" ${q.frameStatus === 'blacklist' ? 'disabled title="命中报失名单，需人工复核"' : ''} class="btn btn-mint h-7 px-2.5 text-[10px]">通过</button>
+        <button data-reject="${q.id}" class="btn btn-outline h-7 px-2.5 text-[10px] ml-1">驳回</button>` : `<button class="btn btn-outline h-7 px-2.5 text-[10px]" data-admin-toggle="${q.id}">详情</button>`}
+      </td>
+    </tr>
+    <tr id="ad-${q.id}" class="hidden bg-slate-50/70">
+      <td colspan="6" class="px-5 py-4">
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div class="rounded-lg border border-slate-200 bg-white p-3">
+            <p class="text-[9px] uppercase tracking-wider text-slate-400">车架号</p>
+            <p class="mt-1 font-mono text-[11px] font-semibold">${q.frame}</p>
+            <p class="mt-1 text-[9.5px] text-slate-400">与登记库比对：${q.frameStatus === 'pass' ? '一致' : q.frameStatus === 'duplicate' ? '重复登记' : '报失名单命中'}</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3">
+            <p class="text-[9px] uppercase tracking-wider text-slate-400">验车报告</p>
+            <p class="mt-1 text-[11px] font-semibold">${q.report}</p>
+            <p class="mt-1 text-[9.5px] text-slate-400">合作车行 · 12 项检测</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3">
+            <p class="text-[9px] uppercase tracking-wider text-slate-400">审核备注</p>
+            <p class="mt-1 text-[10px] leading-4 text-slate-500">${q.note}</p>
+          </div>
+        </div>
+        <div class="mt-2.5 flex items-center gap-2 text-[9.5px] text-slate-400">
+          <svg viewBox="0 0 24 24" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          审核操作将同步至买家前台，并写入不可篡改的操作日志。
+        </div>
+      </td>
+    </tr>`).join('') : `<tr><td colspan="6" class="px-5 py-12 text-center text-[12px] text-slate-400">暂无待处理车辆，审核队列已清空 🎉</td></tr>`;
+
+  $('#kpiQueue').textContent = state.queue.filter(q => q.status === 'pending').length;
+  $('#kpiDispute').textContent = state.disputes.filter(d => d.status !== '已结案').length;
+
+  $('#disputeList').innerHTML = state.disputes.map(d => `
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 sm:px-5">
+      <span class="chip ${d.type === '赃车举报' ? 'bg-rose-50 text-rose-600 border border-rose-200' : d.type === '未交付' ? 'chip-amber' : 'chip-blue'} shrink-0">${d.type}</span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[12px] font-medium">${d.title}</p>
+        <p class="mt-0.5 text-[10px] text-slate-400">${d.id} · ${d.sla}</p>
+      </div>
+      <span class="chip ${d.status === '已结案' ? 'chip-mint' : 'chip-slate'} shrink-0">${d.status}</span>
+      <button onclick="resolveDispute('${d.id}')" ${d.status === '已结案' ? 'disabled' : ''} class="btn ${d.status === '已结案' ? 'btn-outline' : 'btn-dark'} h-7 px-3 text-[10px] shrink-0">${d.status === '已结案' ? '已结案' : '处理'}</button>
+    </div>`).join('');
+}
+function resolveDispute(id){
+  const d = state.disputes.find(x => x.id === id);
+  if (!d || d.status === '已结案') return;
+  d.status = '已结案';
+  renderAdmin();
+  toast('工单已结案，处理结果已通知买卖双方', 'success');
+}
+function adminAction(id, action){
+  const q = state.queue.find(x => x.id === id);
+  if (!q) return;
+  if (action === 'approve'){
+    if (q.frameStatus === 'blacklist'){ toast('该车架号命中报失名单，无法通过审核', 'error'); return; }
+    q.status = 'approved'; toast('审核通过，车辆已同步上架', 'success');
+  } else {
+    q.status = 'rejected'; toast('已驳回，卖家将收到补充材料通知', 'info');
+  }
+  renderAdmin();
+}
+
+/* ---------- 12. Flow & method ---------- */
+const FLOW = [
+  { t:'车辆信息核验上架', owner:['卖家提交','平台审核'], sla:'2 小时内', deliver:'车架号核验结果、上架审核单', branch:'黑名单 / 重复登记 → 驳回并转人工复核',
+    d:'卖家填写品牌型号、拟售价、车架号并上传五通钢印照片；平台比对登记库与报失名单，审核图片与描述一致性。' },
+  { t:'买家筛选与咨询', owner:['平台','买家'], sla:'即时', deliver:'筛选结果、站内咨询记录', branch:'卖家 24h 未回复 → 搜索权重自动下调',
+    d:'按校区、车型、价格与成色筛选，查看验车报告与卖家信用；通过站内咨询确认车辆细节与看车时间。' },
+  { t:'线上预约 · 线下看车', owner:['买家','合作车行'], sla:'预约后 48 小时内', deliver:'看车预约单、履约金托管凭证', branch:'爽约 → 履约金不退；车况严重不符 → 全额解冻',
+    d:'买家选择合作车行与时段，冻结 HK$50 履约金；到场后由车行见证，实车与报告逐项比对。' },
+  { t:'第三方担保付款', owner:['平台担保账户'], sla:'T+0 冻结', deliver:'担保订单、资金托管记录', branch:'超时未支付 → 订单释放，车辆回到在售',
+    d:'买家支付车款与 2% 服务费，资金进入平台托管账户，卖家仅可见「已付款待交付」状态。' },
+  { t:'线下验车交付', owner:['合作车行','买卖双方'], sla:'预约时段内', deliver:'交付确认单、验车报告终版', branch:'现场不符 → 终止交易，全额退款',
+    d:'再次核对车架号与配件清单，签署电子交付单；买家确认后进入 T+1 结算流程。' },
+  { t:'增值服务', owner:['合作车行'], sla:'1–3 个工作日', deliver:'付费验车 / 维修保养 / 同城配送 / 过户备案', branch:'配送损坏 → 平台先行赔付',
+    d:'按需选购：深度验车、刹车与传动保养、校内同城配送、车架号过户备案，全部明码标价。' },
+  { t:'纠纷举报与售后', owner:['平台客服','争议小组'], sla:'48h 响应 · 7 日结案', deliver:'争议工单、处理结论与执行记录', branch:'赃车举报 → 冻结资金并移交警方',
+    d:'车况不符、未交付、赃车三类工单分级处理；证据充分时平台先行赔付，违约方计入信用档案。' }
+];
+const METHOD = [
+  { n:'01', t:'明确设计任务', body:'拆解为车辆核验、安全交易、精准筛选、线下履约、配套维保 5 个子问题，分别定义目标用户与成功指标。' },
+  { n:'02', t:'外部方案检索', body:'调研 Pinkbike 的专业分类与车况标签、闲鱼/转转的流量与担保机制，总结「专业度不足」与「履约缺失」两类缺口。' },
+  { n:'03', t:'内部创意发散', body:'头脑风暴出车架号真伪校验、学生手续费减免、合作车行线下网点、履约金、验车报告公开等 12 个创意。' },
+  { n:'04', t:'系统性整合方案', body:'把创意拆成「网站产品模块」与「配套服务流程」两层，用同一套状态机串联上架、预约、支付、交付与售后。' },
+  { n:'05', t:'复盘迭代优化', body:'识别人工核验成本高、门店覆盖有限、履约金争议等短板，提出抽检 + 信用分层、校园代理点、保险兜底等优化。' }
+];
+function renderFlow(){
+  const tl = $('#flowTimeline');
+  if (!tl) return;
+  tl.innerHTML = FLOW.map((s, i) => `
+    <div class="relative pb-7 pl-11 last:pb-0">
+      ${i < FLOW.length - 1 ? '<span class="absolute left-[15px] top-8 bottom-0 w-px bg-slate-200"></span>' : ''}
+      <span class="absolute left-0 top-0 grid h-8 w-8 place-items-center rounded-full border-2 ${i === 0 ? 'border-brand-500 bg-brand-500 text-white' : 'border-slate-200 bg-white text-slate-500'} text-[10px] font-bold">${String(i + 1).padStart(2, '0')}</span>
+      <div class="flex flex-wrap items-center gap-2">
+        <h3 class="text-[13.5px] font-semibold">${s.t}</h3>
+        ${s.owner.map(o => `<span class="chip chip-slate !text-[9px] !py-0.5">${o}</span>`)}
+        <span class="ml-auto text-[9.5px] font-medium text-brand-600">SLA · ${s.sla}</span>
+      </div>
+      <p class="mt-1.5 text-[11.5px] leading-5 text-slate-500">${s.d}</p>
+      <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[9.5px]">
+        <span class="text-slate-400">交付物：<span class="text-slate-600">${s.deliver}</span></span>
+        <span class="text-amber-600">异常：${s.branch}</span>
+      </div>
+    </div>`).join('');
+
+  const mg = $('#methodGrid');
+  if (mg) mg.innerHTML = METHOD.map(m => `
+    <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 ${m.n === '05' ? 'sm:col-span-2' : ''}">
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-bold text-brand-600">${m.n}</span>
+        <p class="text-[12px] font-semibold">${m.t}</p>
+      </div>
+      <p class="mt-1.5 text-[10.5px] leading-5 text-slate-500">${m.body}</p>
+    </div>`).join('');
+}
+
+/* ---------- 13. Router & events ---------- */
+function go(view){
+  if (location.hash !== '#/' + view) location.hash = '#/' + view;
+  else applyView(view);
+}
+function applyView(view){
+  state.view = view;
+  $$('[data-view]').forEach(s => s.classList.toggle('hidden', s.dataset.view !== view));
+  $$('.nav-link').forEach(b => b.classList.toggle('active', b.dataset.nav === view));
+  window.scrollTo(0, 0);
+  renderGrids();
+  if (view === 'orders') renderOrders();
+  if (view === 'admin') renderAdmin();
+  if (view === 'flow') renderFlow();
+}
+document.addEventListener('click', e => {
+  const nav = e.target.closest('[data-nav]');
+  if (nav){ go(nav.dataset.nav); return; }
+
+  const close = e.target.closest('[data-close]');
+  if (close){
+    const m = close.closest('.modal');
+    if (m) closeModal(m.id);
+    return;
+  }
+
+  const save = e.target.closest('[data-save]');
+  if (save){
+    e.stopPropagation();
+    const id = save.dataset.save;
+    if (state.saved.has(id)){ state.saved.delete(id); toast('已取消收藏', 'info'); }
+    else { state.saved.add(id); toast('已加入收藏，可在个人中心查看', 'success'); }
+    renderGrids();
+    return;
+  }
+
+  const card = e.target.closest('[data-bike]');
+  if (card){ openBike(card.dataset.bike); return; }
+
+  const typeBtn = e.target.closest('[data-type-filter]');
+  if (typeBtn){
+    state.type = typeBtn.dataset.typeFilter;
+    syncFilterUI(); renderGrids(); return;
+  }
+  const cat = e.target.closest('.cat-chip');
+  if (cat){
+    state.type = cat.dataset.type;
+    syncFilterUI(); renderGrids();
+    if (state.view !== 'bikes') go('bikes');
+    return;
+  }
+
+  const dateBtn = e.target.closest('[data-date]');
+  if (dateBtn){ state.bookingDraft.date = dateBtn.dataset.date; renderDateChips(); return; }
+  const timeBtn = e.target.closest('[data-time]');
+  if (timeBtn){ state.bookingDraft.time = timeBtn.dataset.time; renderTimeChips(); return; }
+
+  const approve = e.target.closest('[data-approve]');
+  if (approve){ e.stopPropagation(); adminAction(approve.dataset.approve, 'approve'); return; }
+  const reject = e.target.closest('[data-reject]');
+  if (reject){ e.stopPropagation(); adminAction(reject.dataset.reject, 'reject'); return; }
+
+  const row = e.target.closest('[data-admin-toggle]');
+  if (row){
+    const detail = document.getElementById('ad-' + row.dataset.adminToggle);
+    if (detail) detail.classList.toggle('hidden');
+    return;
+  }
+
+  const orderTab = e.target.closest('[data-order-tab]');
+  if (orderTab){ setOrderTab(orderTab.dataset.orderTab); return; }
+  const adminFilter = e.target.closest('[data-admin-filter]');
+  if (adminFilter){
+    state.adminFilter = adminFilter.dataset.adminFilter;
+    $$('[data-admin-filter]').forEach(el => el.classList.toggle('is-active', el === adminFilter));
+    renderAdmin(); return;
+  }
+});
+
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-filter]');
+  if (!el) return;
+  state[el.dataset.filter] = el.value;
+  renderGrids();
+});
+
+$('#globalSearch')?.addEventListener('input', e => {
+  state.q = e.target.value;
+  renderGrids();
+});
+$('#globalSearch')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); go('bikes'); }
+});
+$('#pubPhoto')?.addEventListener('change', e => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = $('#photoPreview');
+    img.src = ev.target.result;
+    img.classList.remove('hidden');
+  };
+  reader.readAsDataURL(f);
+});
+$('#pubPrice')?.addEventListener('input', updatePriceHint);
+$('#pubBuy')?.addEventListener('input', updatePriceHint);
+function updatePriceHint(){
+  const buy = Number($('#pubBuy').value || 0);
+  const hint = $('#priceHint');
+  if (!hint) return;
+  hint.textContent = buy > 0
+    ? `参考同款成交价：HK$${fmt(Math.round(buy * 0.35))} – HK$${fmt(Math.round(buy * 0.55))}（按 1–2 年车龄估算）`
+    : '参考同款成交价：HK$1,150 – 1,420';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ closeAllModals(); return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (['input', 'textarea', 'select'].includes(tag)) return;
+  const map = { '1':'home', '2':'bikes', '3':'flow', '4':'orders', '5':'admin' };
+  if (map[e.key] && !e.metaKey && !e.ctrlKey && !e.altKey){ go(map[e.key]); }
+});
+
+window.addEventListener('hashchange', () => {
+  const v = location.hash.replace('#/', '') || 'home';
+  applyView(['home','bikes','flow','orders','admin'].includes(v) ? v : 'home');
+});
+
+/* ---------- 14. Init ---------- */
+(function init(){
+  document.querySelectorAll('#modalDetail, #modalBooking, #modalPublish, #modalCheckout').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m.querySelector('.modal-backdrop')) closeModal(m.id); });
+  });
+  const dates = nextDates(7);
+  $('#pubDate').innerHTML = dates.map(d => `<option value="${d.iso}">${d.iso}（${d.wd}）</option>`).join('');
+  renderGrids();
+  renderOrders();
+  renderAdmin();
+  renderFlow();
+  syncFilterUI();
+  applyView(location.hash.replace('#/', '') || 'home');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => { if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { threshold: 0.12 });
+  $$('.reveal').forEach(el => io.observe(el));
+  setTimeout(() => toast('演示提示：按 1–5 可快速切换页面，Esc 关闭弹窗', 'info'), 900);
+
+  /* 演示快捷入口：?bike=b1 直接打开车辆详情，?view=admin 直接进入后台 */
+  const params = new URLSearchParams(location.search);
+  const qView = params.get('view');
+  const qBike = params.get('bike');
+  const qBooking = params.get('booking');
+  if (qView && ['home','bikes','flow','orders','admin'].includes(qView)) go(qView);
+  if (qBike && bikes.some(b => b.id === qBike)) setTimeout(() => openBike(qBike), 350);
+  if (qBooking && bikes.some(b => b.id === qBooking)) setTimeout(() => openBooking(qBooking), 400);
+  if (params.get('publish')) setTimeout(() => openPublish(), 400);
+})();
+</script>
+</body>
+</html>
